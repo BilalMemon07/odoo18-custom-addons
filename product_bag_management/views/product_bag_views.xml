@@ -1,0 +1,99 @@
+<odoo>
+
+    <!-- ========================= -->
+    <!-- PRODUCT BAG CONFIG VIEWS -->
+    <!-- ========================= -->
+
+    <!-- Tree View -->
+    <record id="view_product_bag_tree" model="ir.ui.view">
+        <field name="name">product.bag.config.tree</field>
+        <field name="model">product.bag.config</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="product_id"/>
+                <field name="weight_per_bag"/>
+                <field name="uom_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_product_bag_form" model="ir.ui.view">
+        <field name="name">product.bag.config.form</field>
+        <field name="model">product.bag.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="product_id"/>
+                        <field name="weight_per_bag"/>
+                        <field name="uom_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_product_bag_config" model="ir.actions.act_window">
+        <field name="name">Bag Configuration</field>
+        <field name="res_model">product.bag.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menu inside Products -->
+    <menuitem id="menu_product_bag_config"
+              name="Bag Configuration"
+              parent="stock.menu_stock_inventory_control"
+              action="action_product_bag_config"
+              sequence="25"/>
+
+
+    <!-- ========================= -->
+    <!-- SALE ORDER VIEW -->
+    <!-- ========================= -->
+
+    <record id="sale_order_form_inherit_bags" model="ir.ui.view">
+        <field name="name">sale.order.form.bags</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='order_lines']//list//field[@name='product_uom_qty']" position="after">
+                <field name="bag_qty" />
+            </xpath>
+        </field>
+    </record>
+
+
+    <!-- ========================= -->
+    <!-- PURCHASE ORDER VIEW -->
+    <!-- ========================= -->
+
+    <record id="purchase_order_form_inherit_bags" model="ir.ui.view">
+        <field name="name">purchase.order.form.bags</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']/list//field[@name='product_qty']" position="after">
+                <field name="bag_qty" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+
+    <!-- ========================= -->
+    <!-- ACCOUNT MOVE (INVOICE/BILL) -->
+    <!-- ========================= -->
+
+    <record id="account_move_form_inherit_bags" model="ir.ui.view">
+        <field name="name">account.move.form.bags</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='quantity']" position="after">
+                <field name="bag_qty" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
