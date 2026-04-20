@@ -5,7 +5,7 @@
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
 
-            <xpath expr="//field[@name='list_price']" position="after">
+            <xpath expr="//field[@name='stock_type']" position="after">
                 <field name="ctn_size"/>
                 <field name="grams"/>
                 <field name="trade_price"/>
