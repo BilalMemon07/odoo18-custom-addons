@@ -1,0 +1,88 @@
+<odoo>
+
+<template id="custom_invoice_table" inherit_id="account.report_invoice_document">
+
+    <xpath expr="//table[@name='invoice_line_table']" position="replace">
+
+        <table class="table table-bordered" name="invoice_line_table">
+
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-end">Ctn</th>
+                    <th class="text-end">Pcs</th>
+                    <th class="text-end">Kgs</th>
+                    <th class="text-end">Trade Price</th>
+                    <th class="text-end">MSRP</th>
+                    <th class="text-end">Gross</th>
+
+                    <t t-if="o.invoice_type == 'unofficial'">
+                        <th class="text-end">Margin %</th>
+                    </t>
+
+                    <t t-if="o.invoice_type == 'official'">
+                        <th class="text-end">Tax %</th>
+                        <th class="text-end">Tax Amt</th>
+                    </t>
+
+                    <th class="text-end">Net</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <t t-foreach="o.invoice_line_ids" t-as="line">
+
+                    <!-- Product -->
+                    <tr t-if="line.display_type == 'product'">
+                        <td><span t-field="line.name"/></td>
+                        <td class="text-end"><span t-esc="line.ctn_qty"/></td>
+                        <td class="text-end"><span t-esc="line.pcs_qty"/></td>
+                        <td class="text-end"><span t-esc="line.kgs_qty"/></td>
+                        <td class="text-end"><span t-esc="line.trade_price"/></td>
+                        <td class="text-end"><span t-esc="line.msrp"/></td>
+                        <td class="text-end"><span t-esc="line.gross_amount"/></td>
+
+                        <!-- Unofficial -->
+                        <t t-if="o.invoice_type == 'unofficial'">
+                            <td class="text-end">
+                                <span t-esc="line.distributor_margin"/>%
+                            </td>
+                        </t>
+
+                        <!-- Official -->
+                        <t t-if="o.invoice_type == 'official'">
+                            <td class="text-end">
+                                <span t-esc="line.tax_ids and line.tax_ids[0].amount or 0"/>%
+                            </td>
+                            <td class="text-end">
+                                <span t-esc="line.price_total - line.price_subtotal"/>
+                            </td>
+                        </t>
+
+                        <td class="text-end"><span t-esc="line.net_amount"/></td>
+                    </tr>
+
+                    <!-- Section -->
+                    <tr t-if="line.display_type == 'line_section'">
+                        <td colspan="100">
+                            <strong t-field="line.name"/>
+                        </td>
+                    </tr>
+
+                    <!-- Note -->
+                    <tr t-if="line.display_type == 'line_note'">
+                        <td colspan="100">
+                            <em t-field="line.name"/>
+                        </td>
+                    </tr>
+
+                </t>
+            </tbody>
+
+        </table>
+
+    </xpath>
+
+</template>
+
+</odoo>
