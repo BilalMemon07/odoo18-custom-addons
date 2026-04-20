@@ -4,82 +4,86 @@
 
     <xpath expr="//table[@name='invoice_line_table']" position="replace">
 
-        <table class="table table-bordered" name="invoice_line_table">
+        <!-- ONLY FOR SELECTED COMPANY -->
+        <t t-if="o.company_id.use_custom_invoice">
 
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th class="text-end">Ctn</th>
-                    <th class="text-end">Pcs</th>
-                    <th class="text-end">Kgs</th>
-                    <th class="text-end">Trade Price</th>
-                    <th class="text-end">MSRP</th>
-                    <th class="text-end">Gross</th>
+            <table class="table table-bordered" name="invoice_line_table">
 
-                    <t t-if="o.invoice_type == 'unofficial'">
-                        <th class="text-end">Margin %</th>
-                    </t>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th class="text-end">Ctn</th>
+                        <th class="text-end">Pcs</th>
+                        <th class="text-end">Kgs</th>
+                        <th class="text-end">Trade Price</th>
+                        <th class="text-end">MSRP</th>
+                        <th class="text-end">Gross</th>
 
-                    <t t-if="o.invoice_type == 'official'">
-                        <th class="text-end">Tax %</th>
-                        <th class="text-end">Tax Amt</th>
-                    </t>
-
-                    <th class="text-end">Net</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                <t t-foreach="o.invoice_line_ids" t-as="line">
-
-                    <!-- Product -->
-                    <tr t-if="line.display_type == 'product'">
-                        <td><span t-field="line.name"/></td>
-                        <td class="text-end"><span t-esc="line.ctn_qty"/></td>
-                        <td class="text-end"><span t-esc="line.pcs_qty"/></td>
-                        <td class="text-end"><span t-esc="line.kgs_qty"/></td>
-                        <td class="text-end"><span t-esc="line.trade_price"/></td>
-                        <td class="text-end"><span t-esc="line.msrp"/></td>
-                        <td class="text-end"><span t-esc="line.gross_amount"/></td>
-
-                        <!-- Unofficial -->
                         <t t-if="o.invoice_type == 'unofficial'">
-                            <td class="text-end">
-                                <span t-esc="line.distributor_margin"/>%
-                            </td>
+                            <th class="text-end">Margin %</th>
                         </t>
 
-                        <!-- Official -->
                         <t t-if="o.invoice_type == 'official'">
-                            <td class="text-end">
-                                <span t-esc="line.tax_ids and line.tax_ids[0].amount or 0"/>%
-                            </td>
-                            <td class="text-end">
-                                <span t-esc="line.price_total - line.price_subtotal"/>
-                            </td>
+                            <th class="text-end">Tax %</th>
+                            <th class="text-end">Tax Amt</th>
                         </t>
 
-                        <td class="text-end"><span t-esc="line.net_amount"/></td>
+                        <th class="text-end">Net</th>
                     </tr>
+                </thead>
 
-                    <!-- Section -->
-                    <tr t-if="line.display_type == 'line_section'">
-                        <td colspan="100">
-                            <strong t-field="line.name"/>
-                        </td>
-                    </tr>
+                <tbody>
+                    <t t-foreach="o.invoice_line_ids" t-as="line">
 
-                    <!-- Note -->
-                    <tr t-if="line.display_type == 'line_note'">
-                        <td colspan="100">
-                            <em t-field="line.name"/>
-                        </td>
-                    </tr>
+                        <tr t-if="line.display_type == 'product'">
+                            <td><span t-field="line.name"/></td>
+                            <td class="text-end"><span t-esc="line.ctn_qty"/></td>
+                            <td class="text-end"><span t-esc="line.pcs_qty"/></td>
+                            <td class="text-end"><span t-esc="line.kgs_qty"/></td>
+                            <td class="text-end"><span t-esc="line.trade_price"/></td>
+                            <td class="text-end"><span t-esc="line.msrp"/></td>
+                            <td class="text-end"><span t-esc="line.gross_amount"/></td>
 
-                </t>
-            </tbody>
+                            <t t-if="o.invoice_type == 'unofficial'">
+                                <td class="text-end"><span t-esc="line.distributor_margin"/>%</td>
+                            </t>
 
-        </table>
+                            <t t-if="o.invoice_type == 'official'">
+                                <td class="text-end">
+                                    <span t-esc="line.tax_ids and line.tax_ids[0].amount or 0"/>%
+                                </td>
+                                <td class="text-end">
+                                    <span t-esc="line.price_total - line.price_subtotal"/>
+                                </td>
+                            </t>
+
+                            <td class="text-end"><span t-esc="line.net_amount"/></td>
+                        </tr>
+
+                        <tr t-if="line.display_type == 'line_section'">
+                            <td colspan="100">
+                                <strong t-field="line.name"/>
+                            </td>
+                        </tr>
+
+                        <tr t-if="line.display_type == 'line_note'">
+                            <td colspan="100">
+                                <em t-field="line.name"/>
+                            </td>
+                        </tr>
+
+                    </t>
+                </tbody>
+
+            </table>
+
+        </t>
+
+        <!-- OTHER COMPANIES → DEFAULT -->
+        <t t-else="">
+            <table class="o_has_total_table table o_main_table table-borderless mb-0"
+                   name="invoice_line_table"/>
+        </t>
 
     </xpath>
 

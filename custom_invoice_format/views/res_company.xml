@@ -1,0 +1,21 @@
+<odoo>
+
+    <record id="view_company_form_custom_invoice" model="ir.ui.view">
+        <field name="name">res.company.form.custom.invoice</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Settings section me add karna -->
+            <xpath expr="//sheet/notebook/page[@name='general_info']" position="inside">
+
+                <group string="Invoice Settings">
+                    <field name="use_custom_invoice"/>
+                </group>
+
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

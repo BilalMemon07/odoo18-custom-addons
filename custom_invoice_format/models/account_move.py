@@ -12,22 +12,18 @@ class AccountMove(models.Model):
 class AccountMoveLine(models.Model):
     _inherit = 'account.move.line'
 
-    # Product related fields
     ctn_size = fields.Float(related='product_id.product_tmpl_id.ctn_size', store=True)
     grams = fields.Float(related='product_id.product_tmpl_id.grams', store=True)
     trade_price = fields.Float(related='product_id.product_tmpl_id.trade_price', store=True)
     msrp = fields.Float(related='product_id.product_tmpl_id.msrp', store=True)
 
-    # Calculated quantities
     ctn_qty = fields.Float(compute="_compute_qty", store=True)
     pcs_qty = fields.Float(compute="_compute_qty", store=True)
     kgs_qty = fields.Float(compute="_compute_qty", store=True)
 
-    # Amounts
     gross_amount = fields.Float(compute="_compute_amounts", store=True)
     net_amount = fields.Float(compute="_compute_amounts", store=True)
 
-    # Distributor Margin
     distributor_margin = fields.Float(compute="_compute_margin", store=True)
 
     @api.depends('quantity', 'ctn_size', 'grams')
