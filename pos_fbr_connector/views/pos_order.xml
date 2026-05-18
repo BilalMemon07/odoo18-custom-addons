@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <data>
+		<record id="view_pos_order_tree_inherit" model="ir.ui.view">
+        <field name="name">pos.order.tree.inherit</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='amount_total']" position="after">
+                <field name="invoice_no"/>
+                <field name="amount_tax" sum="Total Tax"/>
+            </xpath>
+        </field>
+    </record>
+        <record id="custom_pos_order_inherit_form_view" model="ir.ui.view">
+		<field name="name">pos.order.form.view</field>
+		<field name="model">pos.order</field>
+		<field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+		<field name="arch" type="xml">
+			<xpath expr="//notebook" position="inside">
+				<page string="FBR Info">
+					<group>
+						<field name="is_registered" readonly="1" />
+						<field name="invoice_no" readonly="1"/>
+<!--						attrs="{'invisible': [('is_returned', '=', False)]}"-->
+						<field name="is_returned" readonly="1" invisible="is_returned == False"/>
+<!--						attrs="{'invisible': [('is_returned', '=', False)]}"-->
+						<field name="return_invoice_number" readonly="1" invisible="is_returned == False"/>
+						<field name="qr_image" widget="image" style="width: 120px; height: 120	px;"/>
+					</group>
+				</page>
+			</xpath>
+
+		</field>
+	</record>
+	<record id="custom_view_pos_order_filter_inherit" model="ir.ui.view">
+		<field name="name">pos.order.list.select.inherit</field>
+		<field name="model">pos.order</field>
+		<field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
+		<field name="arch" type="xml">
+
+			<field name="name" position="after">
+				<field name="invoice_no"/>
+				<field name="is_registered"/>
+			</field>
+			<xpath expr="//filter[@name='posted']" position="after">
+				<filter string="Failed FBR Request" name="fbr" domain="[('is_registered','=',False)]"/>
+				<filter string="FBR Posted Orders" name="posted" domain="[('is_registered','=',True)]"/>
+				<filter string="FBR Returned Orders" name="returned" domain="[('is_returned','=',True)]"/>
+			</xpath>
+		</field>
+	</record>
+    </data>
+</odoo>

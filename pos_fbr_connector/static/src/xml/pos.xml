@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="FBROrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('pos-receipt')]/div[hasclass('pos-receipt-order-data')]" position="inside">
+            <div class="set_fbr_invoice">
+				FBR Invoice Number:
+					<t t-esc="state.invoice_no"/>
+                <br/>
+			</div>
+		</xpath>
+        <xpath expr="//div[hasclass('pos-receipt-order-data')]" position="inside">
+            <t t-if="state.qr_image">
+                <div class="fbr-qr-wrapper" style="text-align:center; margin-top:5px;">
+                    <img style="margin-bottom:5px;width:80px;height:80px;"
+                         t-att-src="'data:image/png;base64,' + state.qr_image"/>
+                </div>
+            </t>
+		</xpath>
+        <!--		<xpath expr="//div[hasclass('pos-receipt-order-data')]" position="after">-->
+        <!--        </xpath>-->
+    </t>
+</templates>

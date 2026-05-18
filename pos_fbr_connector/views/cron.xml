@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <data>
+        <record id="cron_post_data_to_fbr" model="ir.cron">
+		<field name="name">Post Data to FBR</field>
+		<field name="active" eval="False"/>
+		<field name="interval_number">1</field>
+		<field name="interval_type">days</field>
+		<!--<field name="numbercall">-1</field>-->
+		<field name="model_id" ref="point_of_sale.model_pos_order"/>
+		<field name="code">model.cron_to_post_data()</field>
+		<field name="state">code</field>
+	</record>
+    </data>
+</odoo>
+
+

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+	<data>
+		<record id="post_data_to_fbr_action" model="ir.actions.server">
+			<field name="name">Post Data to FBR</field>
+			<field name="type">ir.actions.server</field>
+			<field name="state">code</field>
+			<field name="model_id" ref="point_of_sale.model_pos_order"/>
+			<field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
+			<field name="code">
+				records.action_to_post_data_to_fbr()
+			</field>
+		</record>
+
+		<record id="return_order_data_to_fbr_action" model="ir.actions.server">
+			<field name="name">Return Order</field>
+			<field name="type">ir.actions.server</field>
+			<field name="state">code</field>
+			<field name="model_id" ref="point_of_sale.model_pos_order"/>
+			<field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
+			<field name="code">
+				records.return_order_to_fbr_action()
+			</field>
+		</record>
+	</data>
+</odoo>

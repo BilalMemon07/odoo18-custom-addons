@@ -1,0 +1,10 @@
+.fbr-inv-num{
+    font-size: 13px;
+    text-align: center;
+}
+.set_fbr_invoice {
+    position: relative;
+    top: 200px !important;
+    text-align: center;
+}
+

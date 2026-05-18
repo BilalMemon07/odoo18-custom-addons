@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <data>
+        <record id="custom_fbr_pos_config_from" model="ir.ui.view" >
+		<field name="name">pos.config.form.inherit.view</field>
+		<field name="model">pos.config</field>
+		<field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+		<field name="arch" type="xml">
+			<xpath expr="//form/sheet" position="inside">
+				<h2 name="order">FBR Configuration</h2>
+				<div class="row mt16 o_settings_container">
+					<div id="autocomplete_address" class="col-xs-12 col-md-6 o_setting_box">
+						<div class="o_setting_right_pane">
+							<label for="auth_header"/>
+							<div class="text-muted">
+								FBR URL
+							</div>
+						</div>
+						<div class="o_setting_right_pane">
+							<field name="fbr_url"/>
+						</div>
+						<div class="o_setting_right_pane">
+							<div class="text-muted">
+								FBR Authorization Token
+							</div>
+						</div>
+						<div class="o_setting_right_pane">
+							<field name="auth_header"/>
+						</div>
+						<div class="o_setting_right_pane">
+							<label for="pos_id"/>
+							<div class="text-muted">
+							</div>
+						</div>
+						<div class="o_setting_right_pane">
+							<field name="pos_id"/>
+						</div>
+					</div>
+					<div id="autocomplete_address" class="col-xs-12 col-md-6 o_setting_box">
+						<div class="o_setting_right_pane">
+							<div class="text-muted">
+								Post data to FBR automatically while placing order in POS Session.
+							</div>
+						</div>
+						<div class="o_setting_right_pane">
+							<field name="post_data"/>
+						</div>
+						<div class="o_setting_right_pane">
+							<div class="text-muted">
+								POS FBR Fee
+							</div>
+						</div>
+						<div class="o_setting_right_pane">
+							<field name="allow_fbr_charges"/>
+						</div>
+						<div class="o_setting_right_pane">
+							<div class="text-muted" >
+<!--								attrs="{'invisible': [('allow_fbr_charges', '=', False)]}"-->
+								Select Product
+							</div>
+<!--							attrs="{'invisible': [('allow_fbr_charges', '=', False)],'required':[('allow_fbr_charges','=',True)]}"-->
+							<field name="service_product_id" options="{'no_create': True, 'no_edit': True, 'no_open': True}"/>
+						</div>
+					</div>
+				</div>
+				<br/>
+			</xpath>
+
+		</field>
+	</record>
+    </data>
+</odoo>
