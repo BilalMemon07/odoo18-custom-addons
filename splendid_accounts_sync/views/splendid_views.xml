@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_splendid_connection_list" model="ir.ui.view">
+        <field name="name">splendid.account.connection.list</field>
+        <field name="model">splendid.account.connection</field>
+        <field name="arch" type="xml">
+            <list string="Splendid Connections">
+                <field name="name"/>
+                <field name="tenant"/>
+                <field name="branch"/>
+                <field name="company_id"/>
+                <field name="active"/>
+                <field name="last_master_sync"/>
+                <field name="last_transaction_sync"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_splendid_connection_form" model="ir.ui.view">
+        <field name="name">splendid.account.connection.form</field>
+        <field name="model">splendid.account.connection</field>
+        <field name="arch" type="xml">
+            <form string="Splendid Connection">
+                <header>
+                    <button name="action_test_connection" type="object" string="Test Connection" class="btn-secondary"/>
+                    <button name="action_sync_masters" type="object" string="Sync Masters" class="btn-primary"/>
+                    <button name="action_sync_transactions" type="object" string="Sync Transactions" class="btn-primary"/>
+                    <button name="action_sync_inventory" type="object" string="Sync Inventory" class="btn-primary"/>
+                    <button name="action_sync_manufacturing" type="object" string="Sync Manufacturing" class="btn-primary"/>
+                    <button name="action_sync_all" type="object" string="Sync All" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group string="Destination Company">
+                        <field name="company_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <group string="API Access">
+                            <field name="base_url" placeholder="https://app.splendidaccounts.com"/>
+                            <field name="tenant"/>
+                            <field name="branch"/>
+                            <field name="api_key" password="True"/>
+                            <field name="api_secret" password="True"/>
+                            <field name="app_id" password="True"/>
+                            <field name="verify_ssl"/>
+                            <field name="timeout"/>
+                            <field name="page_size"/>
+                        </group>
+                        <group string="Odoo Defaults">
+                            <field name="sale_journal_id"/>
+                            <field name="purchase_journal_id"/>
+                            <field name="bank_journal_id"/>
+                            <field name="misc_journal_id"/>
+                            <field name="import_as_draft"/>
+                            <field name="auto_post_moves"/>
+                            <field name="force_splendid_accounts"/>
+                            <field name="auto_fetch_missing_accounts"/>
+                            <field name="update_existing_draft_records"/>
+                            <field name="sync_inventory_snapshot"/>
+                            <field name="auto_validate_stock_pickings"/>
+                            <field name="auto_confirm_mrp"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="Default Accounts">
+                        <group>
+                            <field name="default_receivable_account_id"/>
+                            <field name="default_payable_account_id"/>
+                            <field name="default_income_account_id"/>
+                        </group>
+                        <group>
+                            <field name="default_expense_account_id"/>
+                            <field name="default_stock_account_id"/>
+                            <field name="default_suspense_account_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Sync Status">
+                            <group>
+                                <field name="last_master_sync" readonly="1"/>
+                                <field name="last_transaction_sync" readonly="1"/>
+                                <field name="last_inventory_sync" readonly="1"/>
+                                <field name="last_manufacturing_sync" readonly="1"/>
+                                <field name="last_full_sync" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Mappings">
+                            <field name="mapping_ids" readonly="1">
+                                <list>
+                                    <field name="company_id"/>
+                                    <field name="external_model"/>
+                                    <field name="external_id"/>
+                                    <field name="external_name"/>
+                                    <field name="odoo_model"/>
+                                    <field name="res_id"/>
+                                    <field name="last_sync_date"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Logs">
+                            <field name="log_ids" readonly="1">
+                                <list decoration-danger="state == 'error'" decoration-success="state == 'success'" decoration-muted="state == 'skipped'">
+                                    <field name="create_date"/>
+                                    <field name="sync_type"/>
+                                    <field name="external_id"/>
+                                    <field name="state"/>
+                                    <field name="message"/>
+                                    <field name="odoo_model"/>
+                                    <field name="res_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_splendid_log_list" model="ir.ui.view">
+        <field name="name">splendid.sync.log.list</field>
+        <field name="model">splendid.sync.log</field>
+        <field name="arch" type="xml">
+            <list string="Splendid Logs" decoration-danger="state == 'error'" decoration-success="state == 'success'" decoration-muted="state == 'skipped'">
+                <field name="create_date"/>
+                <field name="connection_id"/>
+                <field name="company_id"/>
+                <field name="sync_type"/>
+                <field name="external_id"/>
+                <field name="state"/>
+                <field name="message"/>
+                <field name="odoo_model"/>
+                <field name="res_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_splendid_log_form" model="ir.ui.view">
+        <field name="name">splendid.sync.log.form</field>
+        <field name="model">splendid.sync.log</field>
+        <field name="arch" type="xml">
+            <form string="Splendid Log">
+                <sheet>
+                    <group>
+                        <field name="connection_id" readonly="1"/>
+                        <field name="company_id" readonly="1"/>
+                        <field name="sync_type" readonly="1"/>
+                        <field name="external_id" readonly="1"/>
+                        <field name="state" readonly="1"/>
+                        <field name="message" readonly="1"/>
+                        <field name="odoo_model" readonly="1"/>
+                        <field name="res_id" readonly="1"/>
+                    </group>
+                    <group string="Payload">
+                        <field name="payload" readonly="1" widget="json"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_splendid_map_list" model="ir.ui.view">
+        <field name="name">splendid.sync.map.list</field>
+        <field name="model">splendid.sync.map</field>
+        <field name="arch" type="xml">
+            <list string="Splendid Mappings">
+                <field name="connection_id"/>
+                <field name="company_id"/>
+                <field name="external_model"/>
+                <field name="external_id"/>
+                <field name="external_name"/>
+                <field name="odoo_model"/>
+                <field name="res_id"/>
+                <field name="last_sync_date"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_splendid_connection" model="ir.actions.act_window">
+        <field name="name">Splendid Connections</field>
+        <field name="res_model">splendid.account.connection</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_splendid_logs" model="ir.actions.act_window">
+        <field name="name">Sync Logs</field>
+        <field name="res_model">splendid.sync.log</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_splendid_mappings" model="ir.actions.act_window">
+        <field name="name">External ID Mappings</field>
+        <field name="res_model">splendid.sync.map</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <menuitem id="menu_splendid_root" name="Splendid Accounts" sequence="50" groups="base.group_system"/>
+    <menuitem id="menu_splendid_connections" name="Connections" parent="menu_splendid_root" action="action_splendid_connection" sequence="10"/>
+    <menuitem id="menu_splendid_logs" name="Sync Logs" parent="menu_splendid_root" action="action_splendid_logs" sequence="20"/>
+    <menuitem id="menu_splendid_mappings" name="Mappings" parent="menu_splendid_root" action="action_splendid_mappings" sequence="30"/>
+</odoo>

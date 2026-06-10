@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_splendid_connection_system,splendid.account.connection system,model_splendid_account_connection,base.group_system,1,1,1,1
+access_splendid_sync_map_system,splendid.sync.map system,model_splendid_sync_map,base.group_system,1,1,1,1
+access_splendid_sync_log_system,splendid.sync.log system,model_splendid_sync_log,base.group_system,1,1,1,1

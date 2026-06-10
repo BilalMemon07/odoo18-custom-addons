@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="ir_cron_splendid_sync_all" model="ir.cron">
+        <field name="name">Splendid Accounts: Sync All Active Connections</field>
+        <field name="model_id" ref="model_splendid_account_connection"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_sync_all_active()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="False"/>
+    </record>
+</odoo>
