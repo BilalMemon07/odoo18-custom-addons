@@ -86,6 +86,24 @@ class SplendidAccountConnection(models.Model):
     last_transaction_sync = fields.Datetime(copy=False)
     last_inventory_sync = fields.Datetime(copy=False)
     last_manufacturing_sync = fields.Datetime(copy=False)
+    last_chart_accounts_sync = fields.Datetime(copy=False, string="Last Chart of Accounts Sync")
+    last_customers_sync = fields.Datetime(copy=False, string="Last Customers Sync")
+    last_vendors_sync = fields.Datetime(copy=False, string="Last Vendors Sync")
+    last_products_sync = fields.Datetime(copy=False, string="Last Products Sync")
+    last_warehouses_sync = fields.Datetime(copy=False, string="Last Warehouses Sync")
+    last_inventory_snapshot_sync = fields.Datetime(copy=False, string="Last Inventory Snapshot Sync")
+    last_inventory_adjustments_sync = fields.Datetime(copy=False, string="Last Inventory Adjustments Sync")
+    last_stock_movements_sync = fields.Datetime(copy=False, string="Last Stock Movements Sync")
+    last_boms_sync = fields.Datetime(copy=False, string="Last BOMs Sync")
+    last_manufacturing_orders_sync = fields.Datetime(copy=False, string="Last Manufacturing Orders Sync")
+    last_sales_sync = fields.Datetime(copy=False, string="Last Sales Sync")
+    last_sale_returns_sync = fields.Datetime(copy=False, string="Last Sales Returns Sync")
+    last_purchases_sync = fields.Datetime(copy=False, string="Last Purchases Sync")
+    last_purchase_returns_sync = fields.Datetime(copy=False, string="Last Purchase Returns Sync")
+    last_customer_receipts_sync = fields.Datetime(copy=False, string="Last Customer Receipts Sync")
+    last_vendor_payments_sync = fields.Datetime(copy=False, string="Last Vendor Payments Sync")
+    last_journal_entries_sync = fields.Datetime(copy=False, string="Last Journal Entries Sync")
+    last_expenses_sync = fields.Datetime(copy=False, string="Last Expenses Sync")
     last_full_sync = fields.Datetime(copy=False)
     log_ids = fields.One2many("splendid.sync.log", "connection_id")
     mapping_ids = fields.One2many("splendid.sync.map", "connection_id")
@@ -114,6 +132,33 @@ class SplendidAccountConnection(models.Model):
         "vendor_payments": "/VendorPayments",
         "journal_entries": "/JournalEntries",
         "expenses": "/Expenses",
+    }
+
+    SINGLE_SYNC_ENDPOINTS = {}
+    SINGLE_SYNC_ENDPOINTS.update(MASTER_ENDPOINTS)
+    SINGLE_SYNC_ENDPOINTS.update(INVENTORY_ENDPOINTS)
+    SINGLE_SYNC_ENDPOINTS.update(MANUFACTURING_ENDPOINTS)
+    SINGLE_SYNC_ENDPOINTS.update(TRANSACTION_ENDPOINTS)
+
+    SINGLE_SYNC_LAST_FIELDS = {
+        "chart_accounts": "last_chart_accounts_sync",
+        "customers": "last_customers_sync",
+        "vendors": "last_vendors_sync",
+        "products": "last_products_sync",
+        "warehouses": "last_warehouses_sync",
+        "inventory_snapshot": "last_inventory_snapshot_sync",
+        "inventory_adjustments": "last_inventory_adjustments_sync",
+        "stock_movements": "last_stock_movements_sync",
+        "boms": "last_boms_sync",
+        "manufacturing_orders": "last_manufacturing_orders_sync",
+        "sales": "last_sales_sync",
+        "sale_returns": "last_sale_returns_sync",
+        "purchases": "last_purchases_sync",
+        "purchase_returns": "last_purchase_returns_sync",
+        "customer_receipts": "last_customer_receipts_sync",
+        "vendor_payments": "last_vendor_payments_sync",
+        "journal_entries": "last_journal_entries_sync",
+        "expenses": "last_expenses_sync",
     }
 
     def _company_domain(self):
@@ -538,6 +583,65 @@ class SplendidAccountConnection(models.Model):
             rec.message_post(body=_("Splendid connection successful. Response preview: %s") % json.dumps(data, default=str)[:500])
         return True
 
+    def _action_sync_single(self, sync_type):
+        for rec in self:
+            rec._with_target_company()._sync_single_model(sync_type)
+        return True
+
+    def action_sync_chart_accounts(self):
+        return self._action_sync_single("chart_accounts")
+
+    def action_sync_customers(self):
+        return self._action_sync_single("customers")
+
+    def action_sync_vendors(self):
+        return self._action_sync_single("vendors")
+
+    def action_sync_products(self):
+        return self._action_sync_single("products")
+
+    def action_sync_warehouses(self):
+        return self._action_sync_single("warehouses")
+
+    def action_sync_inventory_snapshot(self):
+        return self._action_sync_single("inventory_snapshot")
+
+    def action_sync_inventory_adjustments(self):
+        return self._action_sync_single("inventory_adjustments")
+
+    def action_sync_stock_movements(self):
+        return self._action_sync_single("stock_movements")
+
+    def action_sync_boms(self):
+        return self._action_sync_single("boms")
+
+    def action_sync_manufacturing_orders(self):
+        return self._action_sync_single("manufacturing_orders")
+
+    def action_sync_sales(self):
+        return self._action_sync_single("sales")
+
+    def action_sync_sale_returns(self):
+        return self._action_sync_single("sale_returns")
+
+    def action_sync_purchases(self):
+        return self._action_sync_single("purchases")
+
+    def action_sync_purchase_returns(self):
+        return self._action_sync_single("purchase_returns")
+
+    def action_sync_customer_receipts(self):
+        return self._action_sync_single("customer_receipts")
+
+    def action_sync_vendor_payments(self):
+        return self._action_sync_single("vendor_payments")
+
+    def action_sync_journal_entries(self):
+        return self._action_sync_single("journal_entries")
+
+    def action_sync_expenses(self):
+        return self._action_sync_single("expenses")
+
     def action_sync_masters(self):
         for rec in self:
             rec._with_target_company()._sync_masters()
@@ -581,30 +685,47 @@ class SplendidAccountConnection(models.Model):
 
     def _sync_masters(self):
         self.ensure_one()
-        for sync_type, endpoint in self.MASTER_ENDPOINTS.items():
-            self._sync_endpoint(sync_type, endpoint)
+        for sync_type in self.MASTER_ENDPOINTS:
+            self._sync_single_model(sync_type)
         self.last_master_sync = fields.Datetime.now()
 
     def _sync_transactions(self):
         self.ensure_one()
-        for sync_type, endpoint in self.TRANSACTION_ENDPOINTS.items():
-            self._sync_endpoint(sync_type, endpoint)
+        for sync_type in self.TRANSACTION_ENDPOINTS:
+            self._sync_single_model(sync_type)
         self.last_transaction_sync = fields.Datetime.now()
 
     def _sync_inventory(self):
         self.ensure_one()
         if self.sync_inventory_snapshot:
-            self._sync_inventory_snapshot()
-        for sync_type, endpoint in self.INVENTORY_ENDPOINTS.items():
-            self._sync_endpoint(sync_type, endpoint)
+            self._sync_single_model("inventory_snapshot")
+        for sync_type in self.INVENTORY_ENDPOINTS:
+            self._sync_single_model(sync_type)
         self.last_inventory_sync = fields.Datetime.now()
 
     def _sync_manufacturing(self):
         self.ensure_one()
-        self._sync_boms()
-        for sync_type, endpoint in self.MANUFACTURING_ENDPOINTS.items():
-            self._sync_endpoint(sync_type, endpoint)
+        self._sync_single_model("boms")
+        for sync_type in self.MANUFACTURING_ENDPOINTS:
+            self._sync_single_model(sync_type)
         self.last_manufacturing_sync = fields.Datetime.now()
+
+    def _sync_single_model(self, sync_type):
+        self.ensure_one()
+        if sync_type == "inventory_snapshot":
+            self._sync_inventory_snapshot()
+        elif sync_type == "boms":
+            self._sync_boms()
+        else:
+            endpoint = self.SINGLE_SYNC_ENDPOINTS.get(sync_type)
+            if not endpoint:
+                raise UserError(_("No Splendid endpoint configured for %s") % sync_type)
+            self._sync_endpoint(sync_type, endpoint)
+        last_field = self.SINGLE_SYNC_LAST_FIELDS.get(sync_type)
+        if last_field and last_field in self._fields:
+            self.write({last_field: fields.Datetime.now()})
+        self.env.cr.commit()
+        return True
 
     def _fetch_detail_payload(self, endpoint, payload):
         """List endpoints may return summary rows without line/details.

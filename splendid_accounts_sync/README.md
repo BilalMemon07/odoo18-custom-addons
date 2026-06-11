@@ -84,3 +84,50 @@ This version also imports Splendid inventory and manufacturing data:
 - BOMs are still created from Splendid assembly products before manufacturing orders are imported.
 
 Keep Auto Validate Stock Pickings and Auto Confirm Manufacturing Orders disabled for the first test sync. Enable them only after checking imported quantities and locations in staging.
+
+
+## Individual Sync Buttons
+
+To avoid API timeout/break issues on heavy data, the connection form now has an **Individual Sync Buttons** tab. You can sync each object separately:
+
+Master data:
+
+- Sync Chart of Accounts
+- Sync Customers
+- Sync Vendors
+- Sync Products
+- Sync Warehouses
+
+Inventory:
+
+- Sync Inventory Snapshot
+- Sync Inventory Adjustments
+- Sync Stock Movements
+
+Manufacturing:
+
+- Sync BOMs
+- Sync Manufacturing Orders
+
+Transactions:
+
+- Sync Sales
+- Sync Sales Returns
+- Sync Purchases
+- Sync Purchase Returns
+- Sync Customer Receipts
+- Sync Vendor Payments
+- Sync Journal Entries
+- Sync Expenses
+
+Recommended order for large databases:
+
+1. Sync Chart of Accounts
+2. Sync Customers and Vendors
+3. Sync Products and Warehouses
+4. Sync Inventory Snapshot / Adjustments / Stock Movements
+5. Sync BOMs
+6. Sync Manufacturing Orders
+7. Sync Sales / Purchases / Receipts / Payments / Journal Entries / Expenses one by one
+
+The old grouped buttons are still available, but **Sync All** should only be used for small datasets or after testing.
