@@ -753,6 +753,8 @@ class SplendidAccountConnection(models.Model):
             self._sync_inventory_snapshot()
         elif sync_type == "boms":
             self._sync_boms()
+        elif sync_type == "products":
+            self._sync_products()
         else:
             endpoint = self.SINGLE_SYNC_ENDPOINTS.get(sync_type)
             if not endpoint:
@@ -923,48 +925,202 @@ class SplendidAccountConnection(models.Model):
         self._set_mapping(model_key, external_id, partner, payload, name)
         return partner
 
+    def _safe_float(self, value, default=0.0):
+        if value in (False, None, ""):
+            return default
+        if isinstance(value, (int, float)):
+            return float(value)
+        text = str(value).strip()
+        if not text:
+            return default
+        # Splendid may send values like "1,200.50" or "PKR 1,200.50".
+        text = re.sub(r"[^0-9.\-]", "", text)
+        if text in ("", ".", "-", "-."):
+            return default
+        try:
+            return float(text)
+        except ValueError:
+            return default
+
+    def _safe_bool(self, value, default=False):
+        if value in (False, None, ""):
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        text = str(value).strip().lower()
+        if text in ("true", "1", "yes", "y", "active", "sale", "purchase"):
+            return True
+        if text in ("false", "0", "no", "n", "inactive"):
+            return False
+        return default
+
+    def _clean_product_code(self, value, fallback=False):
+        code = str(value or fallback or "").strip()
+        if not code:
+            return False
+        # default_code can hold most chars, but keep it short and searchable.
+        code = re.sub(r"\s+", " ", code)
+        return code[:100]
+
+    def _safe_barcode(self, value, product=False):
+        barcode = str(value or "").strip()
+        if not barcode:
+            return False
+        # Splendid schema limits barcode to 24 chars. Odoo barcode should be unique.
+        barcode = barcode[:64]
+        Product = self.env["product.template"].with_company(self.company_id).sudo()
+        domain = [("barcode", "=", barcode)]
+        if product:
+            domain.append(("id", "!=", product.id))
+        if Product.search(domain, limit=1):
+            return False
+        return barcode
+
+    def _product_external_id(self, payload):
+        value = self._find_value(payload, "id", "Id", "productId", "ProductId", "productID", "externalId", "sourceId")
+        if value in (False, None, ""):
+            value = self._find_value(payload, "sku", "code", "number", "barcode", "name")
+        return str(value or "")
+
+    def _fetch_product_detail(self, payload):
+        external_id = self._product_external_id(payload)
+        if not external_id:
+            return payload
+        # Splendid has both /Products/{id} and /Products/{id}/details. Try both.
+        for path in ("/Products/%s" % external_id, "/Products/%s/details" % external_id):
+            try:
+                detail = self._api_request("GET", path)
+            except Exception as exc:  # pylint: disable=broad-except
+                _logger.debug("Could not fetch product detail %s: %s", path, exc)
+                continue
+            rows = self._extract_list(detail)
+            if rows:
+                merged = dict(payload)
+                merged.update(rows[0])
+                return merged
+            if isinstance(detail, dict) and detail:
+                merged = dict(payload)
+                merged.update(detail)
+                return merged
+        return payload
+
+    def _sync_products(self):
+        """Dedicated product sync.
+
+        Product data can be returned by multiple Splendid endpoints depending on
+        product type/use-case. A generic /Products sync may miss sale/purchase/
+        inventory defaults or fail on summaries without complete fields.
+        """
+        self.ensure_one()
+        endpoints = [
+            ("/Products", {"showOpening": True}),
+            ("/Products/ForSale", {"showOpening": True, "showInActive": True, "hideBaseVariant": False}),
+            ("/Products/ForPurchase", {"showOpening": True, "showInActive": True, "hideBaseVariant": False}),
+            ("/Products/ForInventory/Default", {"hideBaseVariant": False}),
+        ]
+        products_by_key = {}
+        for endpoint, params in endpoints:
+            try:
+                use_paging = endpoint == "/Products"
+                rows = self._fetch_collection(endpoint, params=params, use_paging=use_paging)
+            except Exception as exc:  # pylint: disable=broad-except
+                _logger.warning("Splendid product endpoint failed %s: %s", endpoint, exc)
+                self._log("products", "error", _("Product endpoint %s failed: %s") % (endpoint, exc))
+                continue
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                key = self._product_external_id(row) or self._clean_product_code(self._find_value(row, "sku", "code", "number", "name"))
+                if not key:
+                    continue
+                if key in products_by_key:
+                    products_by_key[key].update(row)
+                else:
+                    products_by_key[key] = dict(row)
+
+        if not products_by_key:
+            self._log("products", "error", _("No products received from Splendid API. Check tenant/branch or product endpoint permissions."))
+            return False
+
+        imported = 0
+        failed = 0
+        for key, payload in products_by_key.items():
+            try:
+                full_payload = self._fetch_product_detail(payload)
+                record = self._import_products(full_payload)
+                imported += 1
+                self._log("products", "success", "Imported", full_payload, self._product_external_id(full_payload) or key, record)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid product %s", key)
+                self._log("products", "error", str(exc), payload, key)
+        if imported == 0 and failed:
+            raise UserError(_("No Splendid products were imported. Please open Splendid Sync Logs for the detailed product errors."))
+        return True
+
     def _import_products(self, payload):
-        external_id = self._external_id(payload)
+        external_id = self._product_external_id(payload)
         existing = self._mapped_record("product", external_id, "product.template")
-        name = self._find_value(payload, "name", "displayName", "shortName", "sku") or _("Splendid Product %s") % external_id
-        sku = self._find_value(payload, "sku", "code", "barcode", "number") or external_id
+        name = self._find_value(payload, "name", "displayName", "shortName", "sku", "code") or _("Splendid Product %s") % external_id
+        sku = self._clean_product_code(self._find_value(payload, "sku", "code", "number"), fallback=external_id)
+        if not sku:
+            sku = self._clean_product_code(name, fallback=external_id)
+
         vals = {
-            "name": name,
-            "default_code": str(sku),
-            "barcode": self._find_value(payload, "barcode") or False,
-            "list_price": float(self._find_value(payload, "salePrice", "maximumRetailPrice", default=0.0) or 0.0),
-            "standard_price": float(self._find_value(payload, "purchasePrice", "averageCost", default=0.0) or 0.0),
-            "sale_ok": bool(self._find_value(payload, "isForSale", default=True)),
-            "purchase_ok": bool(self._find_value(payload, "isForPurchase", default=True)),
+            "name": str(name)[:1000],
+            "default_code": sku,
+            "list_price": self._safe_float(self._find_value(payload, "salePrice", "maximumRetailPrice"), 0.0),
+            "standard_price": self._safe_float(self._find_value(payload, "purchasePrice", "averageCost"), 0.0),
+            "sale_ok": self._safe_bool(self._find_value(payload, "isForSale"), True),
+            "purchase_ok": self._safe_bool(self._find_value(payload, "isForPurchase"), True),
             "splendid_product_id": external_id,
             "splendid_is_imported": True,
         }
         if "company_id" in self.env["product.template"]._fields:
             vals["company_id"] = self.company_id.id
+
+        vals.update(self._product_type_vals(payload))
+
         income_account = self._resolve_named_account(payload, "salesAccountId", "salesAccount", fallback_kind=False, required=False)
         expense_account = self._resolve_named_account(payload, "expenseAccountId", "expenseAccount", fallback_kind=False, required=False)
+        inventory_account = self._resolve_named_account(payload, "inventoryAccountId", "inventoryAccount", fallback_kind=False, required=False)
         if income_account and "property_account_income_id" in self.env["product.template"]._fields:
             vals["property_account_income_id"] = income_account.id
         if expense_account and "property_account_expense_id" in self.env["product.template"]._fields:
             vals["property_account_expense_id"] = expense_account.id
-        description = self._find_value(payload, "description")
+        # Odoo stock valuation accounts are normally category-level. If the
+        # product template has an inventory/property field in the installed
+        # version, set it; otherwise leave valuation to the category.
+        if inventory_account and "property_stock_valuation_account_id" in self.env["product.template"]._fields:
+            vals["property_stock_valuation_account_id"] = inventory_account.id
+
+        description = self._find_value(payload, "description", "shortDescription", "catalogContent")
         if description:
             vals["description_sale"] = description
             vals["description_purchase"] = description
-        vals.update(self._product_type_vals(payload))
+
         vals = {k: v for k, v in vals.items() if v is not None}
+        Product = self.env["product.template"].with_company(self.company_id).sudo()
         if existing:
-            existing.write(vals)
             product = existing
+            barcode = self._safe_barcode(self._find_value(payload, "barcode"), product=product)
+            if barcode and "barcode" in product._fields:
+                vals["barcode"] = barcode
+            product.write(vals)
         else:
-            product_domain = [("default_code", "=", str(sku))]
+            product_domain = [("default_code", "=", sku)]
             if "company_id" in self.env["product.template"]._fields:
                 product_domain = ["&"] + product_domain + ["|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)]
-            product = self.env["product.template"].with_company(self.company_id).sudo().search(product_domain, limit=1)
+            product = Product.search(product_domain, limit=1)
+            barcode = self._safe_barcode(self._find_value(payload, "barcode"), product=product if product else False)
+            if barcode:
+                vals["barcode"] = barcode
             if product:
                 product.write(vals)
             else:
-                product = self.env["product.template"].with_company(self.company_id).sudo().create(vals)
+                product = Product.create(vals)
         self._set_mapping("product", external_id, product, payload, name)
         return product
 
@@ -1392,13 +1548,22 @@ class SplendidAccountConnection(models.Model):
         return self.env["res.partner"]
 
     def _resolve_product_from_line(self, line):
-        external_id = self._find_value(line, "productId")
+        external_id = self._find_value(line, "productId", "ProductId", "itemId", "productID")
         product = self._mapped_record("product", external_id, "product.template") if external_id else self.env["product.template"]
         if product:
             return product
-        nested = self._nested(line, "product")
+        nested = self._nested(line, "product") or self._nested(line, "item")
         if nested:
             return self._import_products(nested)
+        # Last fallback: try SKU/code on the transaction line.
+        sku = self._clean_product_code(self._find_value(line, "sku", "productCode", "code", "productName"))
+        if sku:
+            domain = [("default_code", "=", sku)]
+            if "company_id" in self.env["product.template"]._fields:
+                domain = ["&"] + domain + ["|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)]
+            product = self.env["product.template"].with_company(self.company_id).sudo().search(domain, limit=1)
+            if product:
+                return product
         return self.env["product.template"]
 
     def _import_customer_receipts(self, payload):
