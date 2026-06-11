@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -439,6 +440,41 @@ class SplendidAccountConnection(models.Model):
                 return True
         return False
 
+    def _clean_account_code(self, code):
+        """Return an Odoo-safe account code.
+
+        Odoo account.account.code accepts only alphanumeric characters and dots.
+        Splendid sometimes sends codes with spaces, slashes, hyphens or other
+        separators, so we normalize those values before searching/creating
+        accounts.
+        """
+        code = str(code or "").strip()
+        code = re.sub(r"[\s\-_/]+", ".", code)
+        code = re.sub(r"[^A-Za-z0-9.]", "", code)
+        code = re.sub(r"\.+", ".", code).strip(".")
+        return code[:64]
+
+    def _get_payload_account_code(self, payload, external_id=False):
+        raw_code = self._find_value(payload, "code", "number", "accountCode", "accountNumber", "accountNo")
+        code = self._clean_account_code(raw_code)
+        if code:
+            return code
+
+        # If the API sends the account number inside the name/description, use it.
+        # Example: "GST/HST on Purchases - 118100" -> "118100".
+        for key in ("name", "displayName", "description"):
+            text = str(self._find_value(payload, key, default="") or "")
+            match = re.search(r"\b[A-Za-z]*\d[A-Za-z0-9.]*\b", text)
+            if match:
+                code = self._clean_account_code(match.group(0))
+                if code:
+                    return code
+
+        code = self._clean_account_code(external_id or self._external_id(payload))
+        if not code:
+            raise UserError(_("Invalid account code received from Splendid API."))
+        return code
+
     def _search_account_by_code_or_external(self, external_id=None, code=None):
         self.ensure_one()
         Account = self.env["account.account"].with_company(self.company_id).sudo()
@@ -450,8 +486,9 @@ class SplendidAccountConnection(models.Model):
             mapped = self._mapped_record("account", external_id, "account.account")
             if mapped:
                 return mapped
-        if code not in (False, None, ""):
-            account = Account.search([("code", "=", str(code))] + company_domain, limit=1)
+        code = self._clean_account_code(code)
+        if code:
+            account = Account.search([("code", "=", code)] + company_domain, limit=1)
             if account:
                 return account
         return Account
@@ -767,10 +804,10 @@ class SplendidAccountConnection(models.Model):
     def _import_chart_accounts(self, payload):
         external_id = self._external_id(payload)
         existing = self._mapped_record("account", external_id, "account.account")
-        code = str(self._find_value(payload, "code", "number") or external_id)
+        code = self._get_payload_account_code(payload, external_id)
         name = self._find_value(payload, "name", "displayName", "description") or code
         vals = {
-            "code": code[:64],
+            "code": code,
             "name": name,
             "account_type": self._map_account_type(payload),
             "splendid_account_id": external_id,
@@ -1198,16 +1235,56 @@ class SplendidAccountConnection(models.Model):
                 return fields.Datetime.now()
         return value
 
+    def _selection_has_value(self, model, field_name, value):
+        field = model._fields.get(field_name)
+        if not field or not getattr(field, "selection", False):
+            return False
+        selection = field.selection
+        if isinstance(selection, str):
+            selection = getattr(model, selection)()
+        elif callable(selection):
+            selection = selection(model)
+        return value in [item[0] for item in (selection or [])]
+
     def _product_type_vals(self, payload):
         track_inventory = bool(self._find_value(payload, "trackInventory", default=False))
         product_model = self.env["product.template"]
         vals = {}
+
+        type_text = " ".join(
+            str(x or "")
+            for x in (
+                self._find_value(payload, "type"),
+                self._find_value(payload, "productType"),
+                self._find_value(payload, "itemType"),
+                self._find_value(payload, "category"),
+            )
+        ).lower()
+
+        is_service = "service" in type_text
+        odoo_type = "service" if is_service else "consu"
+
+        # Odoo 18/19 product.template.type uses consu/service/combo.
+        # Do not send "product" here; it causes:
+        # Wrong value for product.template.type: 'product'
+        if "type" in product_model._fields:
+            if self._selection_has_value(product_model, "type", odoo_type):
+                vals["type"] = odoo_type
+            elif self._selection_has_value(product_model, "type", "product") and track_inventory and not is_service:
+                vals["type"] = "product"
+            elif self._selection_has_value(product_model, "type", "consu"):
+                vals["type"] = "consu"
+
         if "detailed_type" in product_model._fields:
-            vals["detailed_type"] = "product" if track_inventory else "consu"
-        elif "type" in product_model._fields:
-            vals["type"] = "product" if track_inventory else "consu"
+            if self._selection_has_value(product_model, "detailed_type", odoo_type):
+                vals["detailed_type"] = odoo_type
+            elif self._selection_has_value(product_model, "detailed_type", "product") and track_inventory and not is_service:
+                vals["detailed_type"] = "product"
+            elif self._selection_has_value(product_model, "detailed_type", "consu"):
+                vals["detailed_type"] = "consu"
+
         if "is_storable" in product_model._fields:
-            vals["is_storable"] = track_inventory
+            vals["is_storable"] = bool(track_inventory and not is_service)
         return vals
 
     def _import_sales(self, payload):

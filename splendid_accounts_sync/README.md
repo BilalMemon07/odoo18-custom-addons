@@ -131,3 +131,11 @@ Recommended order for large databases:
 7. Sync Sales / Purchases / Receipts / Payments / Journal Entries / Expenses one by one
 
 The old grouped buttons are still available, but **Sync All** should only be used for small datasets or after testing.
+
+## 18.0.1.4.1
+
+Fixes added:
+- Product import now maps Splendid stock/goods products to Odoo `consu` instead of invalid `product` for Odoo 18/19.
+- Product import sets `is_storable` when Odoo has this field and Splendid `trackInventory` is enabled.
+- Chart of Account import now sanitizes account codes so only alphanumeric characters and dots are sent to Odoo.
+
