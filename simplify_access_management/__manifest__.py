@@ -16,7 +16,7 @@
     'author': 'Terabits Technolab',
     'license': 'OPL-1',
     'category': 'Services',
-    'website': 'https://www.terabits.xyz/apps/18.0/simplify_access_management',
+    'website': 'https://www.terabits.xyz/apps/17.0/simplify_access_management',
     'summary': """All In One Access Management App for setting the correct access rights for fields, models, menus, views for any module and for any user.
         All in one access management App,
         Easier then Record rules setup,
