@@ -33,10 +33,10 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'pos_fbr_connector/static/src/js/payment_screen_extend.js',
-            'pos_fbr_connector/static/src/js/models_extend.js',
-            'pos_fbr_connector/static/src/js/pos_order_receipt_fbr.js',
-            'pos_fbr_connector/static/src/css/pos.css',
-            'pos_fbr_connector/static/src/xml/pos.xml',
+            # 'pos_fbr_connector/static/src/js/models_extend.js',
+            # 'pos_fbr_connector/static/src/js/pos_order_receipt_fbr.js',
+            # 'pos_fbr_connector/static/src/css/pos.css',
+            # 'pos_fbr_connector/static/src/xml/pos.xml',
         ],
     },
     # only loaded in demonstration mode
