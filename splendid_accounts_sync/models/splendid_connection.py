@@ -1198,10 +1198,10 @@ class SplendidAccountConnection(models.Model):
         if not product_tmpl:
             return self.env["product.product"]
         vals = {}
-        if "detailed_type" in product_tmpl._fields and product_tmpl.detailed_type != "product":
-            vals["detailed_type"] = "product"
-        elif "type" in product_tmpl._fields and product_tmpl.type != "product":
-            vals["type"] = "product"
+        if "detailed_type" in product_tmpl._fields and product_tmpl.detailed_type != "consu":
+            vals["detailed_type"] = "consu"
+        elif "type" in product_tmpl._fields and product_tmpl.type != "consu":
+            vals["type"] = "consu"
         if "is_storable" in product_tmpl._fields and not product_tmpl.is_storable:
             vals["is_storable"] = True
         if vals:

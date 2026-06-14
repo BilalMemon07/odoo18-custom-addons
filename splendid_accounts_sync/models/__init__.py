@@ -9,3 +9,7 @@ from . import account_payment
 from . import stock_warehouse
 from . import stock_picking
 from . import mrp_production
+
+from . import sale_order
+from . import purchase_order
+from . import splendid_end_to_end

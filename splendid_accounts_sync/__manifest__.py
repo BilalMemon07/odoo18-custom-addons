@@ -1,7 +1,7 @@
 {
     "name": "Splendid Accounts Sync",
     "summary": "Import Splendid Accounts masters and transactions into Odoo",
-    "version": "18.0.1.3.0",
+    "version": "18.0.2.0.0",
     "category": "Accounting/Accounting",
     "author": "Ideabox Technology",
     "license": "LGPL-3",
@@ -19,6 +19,7 @@
     "data": [
         "security/ir.model.access.csv",
         "views/splendid_views.xml",
+        "views/splendid_end_to_end_views.xml",
         "data/ir_cron.xml",
     ],
     "installable": True,

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_splendid_connection_form_end_to_end" model="ir.ui.view">
+        <field name="name">splendid.account.connection.form.end.to.end</field>
+        <field name="model">splendid.account.connection</field>
+        <field name="inherit_id" ref="splendid_accounts_sync.view_splendid_connection_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header/button[@name='action_sync_transactions']" position="after">
+                <button name="action_sync_sales_module" type="object" string="Sync Sales Module" class="btn-secondary"
+                        confirm="This will sync customers, products, warehouses, sale orders, sale deliveries, invoices, returns and customer payments/refunds."/>
+                <button name="action_sync_purchase_module" type="object" string="Sync Purchase Module" class="btn-secondary"
+                        confirm="This will sync vendors, products, warehouses, purchase orders, purchase receipts, bills, returns and vendor payments/refunds."/>
+                <button name="action_sync_accounting_module" type="object" string="Sync Accounting Module" class="btn-secondary"
+                        confirm="This will sync chart of accounts, journal entries, expenses and bank deposits."/>
+            </xpath>
+
+            <xpath expr="//field[@name='update_existing_draft_records']" position="after">
+                <field name="auto_confirm_sale_orders"/>
+                <field name="auto_confirm_purchase_orders"/>
+                <field name="auto_reconcile_payments"/>
+            </xpath>
+
+            <xpath expr="//field[@name='default_suspense_account_id']" position="after">
+                <field name="default_undeposited_account_id"/>
+            </xpath>
+
+            <xpath expr="//notebook/page[.//button[@name='action_sync_chart_accounts']]" position="before">
+                <page string="Module Wise Sync">
+                    <group string="Recommended End-to-End Flow">
+                        <group>
+                            <button name="action_sync_masters" type="object" string="1. Sync Masters" class="btn-primary"/>
+                            <button name="action_sync_sales_module" type="object" string="2. Sync Sales Module" class="btn-primary"/>
+                            <button name="action_sync_purchase_module" type="object" string="3. Sync Purchase Module" class="btn-primary"/>
+                        </group>
+                        <group>
+                            <button name="action_sync_inventory" type="object" string="4. Sync Inventory Module" class="btn-primary"/>
+                            <button name="action_sync_manufacturing" type="object" string="5. Sync Manufacturing Module" class="btn-primary"/>
+                            <button name="action_sync_accounting_module" type="object" string="6. Sync Accounting/Bank Module" class="btn-primary"/>
+                        </group>
+                    </group>
+                    <group string="Last Module Sync Dates">
+                        <field name="last_sales_module_sync" readonly="1"/>
+                        <field name="last_purchase_module_sync" readonly="1"/>
+                        <field name="last_accounting_module_sync" readonly="1"/>
+                        <field name="last_inventory_sync" readonly="1"/>
+                        <field name="last_manufacturing_sync" readonly="1"/>
+                    </group>
+                </page>
+            </xpath>
+
+            <xpath expr="//button[@name='action_sync_sales']" position="before">
+                <button name="action_sync_sale_orders" type="object" string="Sync Sale Orders" class="btn-primary"/>
+                <field name="last_sale_orders_sync" readonly="1"/>
+                <button name="action_sync_sale_deliveries" type="object" string="Sync Sale Deliveries" class="btn-primary"/>
+                <field name="last_sale_deliveries_sync" readonly="1"/>
+            </xpath>
+
+            <xpath expr="//button[@name='action_sync_purchases']" position="before">
+                <button name="action_sync_purchase_orders" type="object" string="Sync Purchase Orders" class="btn-primary"/>
+                <field name="last_purchase_orders_sync" readonly="1"/>
+                <button name="action_sync_purchase_receipts" type="object" string="Sync Purchase Receipts" class="btn-primary"/>
+                <field name="last_purchase_receipts_sync" readonly="1"/>
+            </xpath>
+
+            <xpath expr="//button[@name='action_sync_customer_receipts']" position="after">
+                <button name="action_sync_customer_refunds" type="object" string="Sync Customer Refunds" class="btn-primary"/>
+                <field name="last_customer_refunds_sync" readonly="1"/>
+            </xpath>
+
+            <xpath expr="//button[@name='action_sync_vendor_payments']" position="after">
+                <button name="action_sync_vendor_refunds" type="object" string="Sync Vendor Refunds" class="btn-primary"/>
+                <field name="last_vendor_refunds_sync" readonly="1"/>
+            </xpath>
+
+            <xpath expr="//button[@name='action_sync_expenses']" position="after">
+                <button name="action_sync_bank_deposits" type="object" string="Sync Bank Deposits" class="btn-primary"/>
+                <field name="last_bank_deposits_sync" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
