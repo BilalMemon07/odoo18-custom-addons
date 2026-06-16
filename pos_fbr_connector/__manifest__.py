@@ -32,7 +32,7 @@
             # 'pos_fbr_connector/static/src/js/pos.js',
     'assets': {
         'point_of_sale._assets_pos': [
-            # 'pos_fbr_connector/static/src/js/payment_screen_extend.js',
+            'pos_fbr_connector/static/src/js/payment_screen_extend.js',
            
         ],
     },
