@@ -5,7 +5,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/location_master_view.xml',
-        'views/res_partner.xml'
+        # 'views/res_partner.xml'
 
     ],
     'installable': True,
