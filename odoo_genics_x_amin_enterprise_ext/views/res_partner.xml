@@ -5,7 +5,7 @@
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
 
-            <xpath expr="//field[@name='tax_id']" position="after">            
+            <xpath expr="//field[@name='city']" position="after">            
                 <field name="type_customer"/>
                 <field name="geo_town_id"/>
                 <field name="geo_territory_id" readonly="1"/>
