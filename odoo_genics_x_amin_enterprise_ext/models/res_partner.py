@@ -33,3 +33,5 @@ class ResPartner(models.Model):
         store=True,
         readonly=True,
     )
+
+    type_customer = fields.Selection(selection=[('wholesale','Wholesale'),('Distributor','Distributor'), ('retail','Retail')]) 
