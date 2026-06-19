@@ -4,7 +4,7 @@
     'depends': ['sale', 'purchase', 'account','stock'],
     'data': [
         'security/ir.model.access.csv',
-        'views/location_master_view.xml',
+        'views/location_master_views.xml',
         'views/res_partner.xml'
 
     ],
