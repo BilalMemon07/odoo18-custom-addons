@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===================== REGION ===================== -->
+
+    <record id="view_ib_geo_region_list" model="ir.ui.view">
+        <field name="name">ib.geo.region.list</field>
+        <field name="model">ib.geo.region</field>
+        <field name="arch" type="xml">
+            <list string="Regions">
+                <field name="name"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_region_form" model="ir.ui.view">
+        <field name="name">ib.geo.region.form</field>
+        <field name="model">ib.geo.region</field>
+        <field name="arch" type="xml">
+            <form string="Region">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_region_search" model="ir.ui.view">
+        <field name="name">ib.geo.region.search</field>
+        <field name="model">ib.geo.region</field>
+        <field name="arch" type="xml">
+            <search string="Search Regions">
+                <field name="name"/>
+                <filter name="active" string="Active" domain="[('active', '=', True)]"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ib_geo_region" model="ir.actions.act_window">
+        <field name="name">Regions</field>
+        <field name="res_model">ib.geo.region</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <!-- ===================== ZONE ===================== -->
+
+    <record id="view_ib_geo_zone_list" model="ir.ui.view">
+        <field name="name">ib.geo.zone.list</field>
+        <field name="model">ib.geo.zone</field>
+        <field name="arch" type="xml">
+            <list string="Zones">
+                <field name="name"/>
+                <field name="region_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_zone_form" model="ir.ui.view">
+        <field name="name">ib.geo.zone.form</field>
+        <field name="model">ib.geo.zone</field>
+        <field name="arch" type="xml">
+            <form string="Zone">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="region_id"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_zone_search" model="ir.ui.view">
+        <field name="name">ib.geo.zone.search</field>
+        <field name="model">ib.geo.zone</field>
+        <field name="arch" type="xml">
+            <search string="Search Zones">
+                <field name="name"/>
+                <field name="region_id"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_region" string="Region" context="{'group_by': 'region_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ib_geo_zone" model="ir.actions.act_window">
+        <field name="name">Zones</field>
+        <field name="res_model">ib.geo.zone</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <!-- ===================== TERRITORY ===================== -->
+
+    <record id="view_ib_geo_territory_list" model="ir.ui.view">
+        <field name="name">ib.geo.territory.list</field>
+        <field name="model">ib.geo.territory</field>
+        <field name="arch" type="xml">
+            <list string="Territories">
+                <field name="name"/>
+                <field name="zone_id"/>
+                <field name="region_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_territory_form" model="ir.ui.view">
+        <field name="name">ib.geo.territory.form</field>
+        <field name="model">ib.geo.territory</field>
+        <field name="arch" type="xml">
+            <form string="Territory">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="zone_id"/>
+                        <field name="region_id" readonly="1"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_territory_search" model="ir.ui.view">
+        <field name="name">ib.geo.territory.search</field>
+        <field name="model">ib.geo.territory</field>
+        <field name="arch" type="xml">
+            <search string="Search Territories">
+                <field name="name"/>
+                <field name="zone_id"/>
+                <field name="region_id"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_zone" string="Zone" context="{'group_by': 'zone_id'}"/>
+                    <filter name="group_by_region" string="Region" context="{'group_by': 'region_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ib_geo_territory" model="ir.actions.act_window">
+        <field name="name">Territories</field>
+        <field name="res_model">ib.geo.territory</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <!-- ===================== TOWN ===================== -->
+
+    <record id="view_ib_geo_town_list" model="ir.ui.view">
+        <field name="name">ib.geo.town.list</field>
+        <field name="model">ib.geo.town</field>
+        <field name="arch" type="xml">
+            <list string="Towns">
+                <field name="name"/>
+                <field name="territory_id"/>
+                <field name="zone_id"/>
+                <field name="region_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_town_form" model="ir.ui.view">
+        <field name="name">ib.geo.town.form</field>
+        <field name="model">ib.geo.town</field>
+        <field name="arch" type="xml">
+            <form string="Town">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="territory_id"/>
+                        <field name="zone_id" readonly="1"/>
+                        <field name="region_id" readonly="1"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ib_geo_town_search" model="ir.ui.view">
+        <field name="name">ib.geo.town.search</field>
+        <field name="model">ib.geo.town</field>
+        <field name="arch" type="xml">
+            <search string="Search Towns">
+                <field name="name"/>
+                <field name="territory_id"/>
+                <field name="zone_id"/>
+                <field name="region_id"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_territory" string="Territory" context="{'group_by': 'territory_id'}"/>
+                    <filter name="group_by_zone" string="Zone" context="{'group_by': 'zone_id'}"/>
+                    <filter name="group_by_region" string="Region" context="{'group_by': 'region_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ib_geo_town" model="ir.actions.act_window">
+        <field name="name">Towns</field>
+        <field name="res_model">ib.geo.town</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <!-- ===================== MENU ===================== -->
+
+    <menuitem id="menu_ib_geo_root"
+              name="Geo Locations"
+              sequence="90"/>
+
+    <menuitem id="menu_ib_geo_region"
+              name="Regions"
+              parent="menu_ib_geo_root"
+              action="action_ib_geo_region"
+              sequence="10"/>
+
+    <menuitem id="menu_ib_geo_zone"
+              name="Zones"
+              parent="menu_ib_geo_root"
+              action="action_ib_geo_zone"
+              sequence="20"/>
+
+    <menuitem id="menu_ib_geo_territory"
+              name="Territories"
+              parent="menu_ib_geo_root"
+              action="action_ib_geo_territory"
+              sequence="30"/>
+
+    <menuitem id="menu_ib_geo_town"
+              name="Towns"
+              parent="menu_ib_geo_root"
+              action="action_ib_geo_town"
+              sequence="40"/>
+
+</odoo>

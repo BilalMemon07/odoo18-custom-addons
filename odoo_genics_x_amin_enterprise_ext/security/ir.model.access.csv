@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ib_geo_region_user,access.ib.geo.region.user,model_ib_geo_region,base.group_user,1,1,1,1
+access_ib_geo_zone_user,access.ib.geo.zone.user,model_ib_geo_zone,base.group_user,1,1,1,1
+access_ib_geo_territory_user,access.ib.geo.territory.user,model_ib_geo_territory,base.group_user,1,1,1,1
+access_ib_geo_town_user,access.ib.geo.town.user,model_ib_geo_town,base.group_user,1,1,1,1
