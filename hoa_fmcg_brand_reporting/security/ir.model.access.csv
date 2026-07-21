@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fmcg_brand_user,fmcg.brand user,model_fmcg_brand,base.group_user,1,1,1,1
+access_fmcg_sales_channel_user,fmcg.sales.channel user,model_fmcg_sales_channel,base.group_user,1,1,1,1
+access_fmcg_cost_revenue_report_user,fmcg.cost.revenue.report user,model_fmcg_cost_revenue_report,base.group_user,1,0,0,0
+access_fmcg_brand_sales_report_user,fmcg.brand.sales.report user,model_fmcg_brand_sales_report,base.group_user,1,0,0,0
+access_fmcg_region_report_user,fmcg.region.report user,model_fmcg_region_report,base.group_user,1,0,0,0
+access_fmcg_salesperson_report_user,fmcg.salesperson.report user,model_fmcg_salesperson_report,base.group_user,1,0,0,0
+access_fmcg_brand_pl_report_user,fmcg.brand.pl.report user,model_fmcg_brand_pl_report,base.group_user,1,0,0,0

@@ -4,6 +4,8 @@ from odoo.tools import float_round
 
 class ProductProduct(models.Model):
     _inherit = "product.product"
+    
+    
     def _compute_sales_count(self):
             r = {}
             self.sales_count = 0

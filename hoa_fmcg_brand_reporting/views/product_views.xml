@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_product_category_form_fmcg" model="ir.ui.view">
+        <field name="name">product.category.form.fmcg</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='parent_id']" position="after">
+                <field name="show_fmcg_fields" invisible="1"/>
+                <field name="is_fmcg_category" invisible="not show_fmcg_fields"/>
+                <field name="fmcg_brand_id" invisible="not show_fmcg_fields"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_template_form_fmcg" model="ir.ui.view">
+        <field name="name">product.template.form.fmcg</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='categ_id']" position="after">
+                <field name="show_fmcg_fields" invisible="1"/>
+                <field name="fmcg_brand_id" invisible="not show_fmcg_fields"/>
+                <field name="fmcg_analytic_account_id" invisible="not show_fmcg_fields"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_template_list_fmcg" model="ir.ui.view">
+        <field name="name">product.template.list.fmcg</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='categ_id']" position="after">
+                <field name="fmcg_brand_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_template_search_fmcg" model="ir.ui.view">
+        <field name="name">product.template.search.fmcg</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="fmcg_brand_id" string="Brand"/>
+                <filter string="FMCG Categories" name="fmcg_category" domain="[('categ_id.is_fmcg_category', '=', True)]"/>
+                <filter string="Brand" name="group_by_fmcg_brand" context="{'group_by': 'fmcg_brand_id'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

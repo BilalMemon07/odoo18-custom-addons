@@ -1,14 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_partner_invoice_type" model="ir.ui.view">
-        <field name="name">partner.invoice.type</field>
+        <field name="name">res.partner.invoice.type</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-
             <xpath expr="//field[@name='category_id']" position="after">
-                <field name="invoice_type"/>
+                <field name="show_custom_invoice_fields" invisible="1"/>
+                <field name="invoice_type" invisible="not show_custom_invoice_fields"/>
             </xpath>
-
         </field>
     </record>
 </odoo>

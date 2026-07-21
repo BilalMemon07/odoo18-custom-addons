@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Cost vs Revenue -->
+    <record id="view_fmcg_cost_revenue_report_list" model="ir.ui.view">
+        <field name="name">fmcg.cost.revenue.report.list</field>
+        <field name="model">fmcg.cost.revenue.report</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="team_id"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_territory_id"/>
+                <field name="fmcg_zone_id"/>
+                <field name="fmcg_channel_id"/>
+                <field name="fmcg_brand_id"/>
+                <field name="salesperson_id"/>
+                <field name="revenue" sum="Revenue"/>
+                <field name="cogs" sum="COGS"/>
+                <field name="gross_margin" sum="Gross Margin"/>
+                <field name="allocated_expenses" sum="Allocated Expenses"/>
+                <field name="net_margin" sum="Net Margin"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_fmcg_cost_revenue_report_pivot" model="ir.ui.view">
+        <field name="name">fmcg.cost.revenue.report.pivot</field>
+        <field name="model">fmcg.cost.revenue.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="team_id" type="row"/>
+                <field name="fmcg_city_id" type="row"/>
+                <field name="fmcg_territory_id" type="row"/>
+                <field name="fmcg_zone_id" type="row"/>
+                <field name="fmcg_channel_id" type="col"/>
+                <field name="revenue" type="measure"/>
+                <field name="cogs" type="measure"/>
+                <field name="gross_margin" type="measure"/>
+                <field name="allocated_expenses" type="measure"/>
+                <field name="net_margin" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_fmcg_cost_revenue_report_graph" model="ir.ui.view">
+        <field name="name">fmcg.cost.revenue.report.graph</field>
+        <field name="model">fmcg.cost.revenue.report</field>
+        <field name="arch" type="xml">
+            <graph type="bar">
+                <field name="team_id"/>
+                <field name="revenue" type="measure"/>
+                <field name="cogs" type="measure"/>
+                <field name="net_margin" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="view_fmcg_cost_revenue_report_search" model="ir.ui.view">
+        <field name="name">fmcg.cost.revenue.report.search</field>
+        <field name="model">fmcg.cost.revenue.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="date"/>
+                <field name="fmcg_brand_id"/>
+                <field name="fmcg_region_id"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_territory_id"/>
+                <field name="fmcg_zone_id"/>
+                <field name="fmcg_channel_id"/>
+                <field name="team_id"/>
+                <field name="salesperson_id"/>
+                <filter string="Brand" name="group_brand" context="{'group_by': 'fmcg_brand_id'}"/>
+                <filter string="Sales Team" name="group_team" context="{'group_by': 'team_id'}"/>
+                <filter string="Town/City" name="group_city" context="{'group_by': 'fmcg_city_id'}"/>
+                <filter string="Territory" name="group_territory" context="{'group_by': 'fmcg_territory_id'}"/>
+                <filter string="Zone" name="group_zone" context="{'group_by': 'fmcg_zone_id'}"/>
+                <filter string="Channel" name="group_channel" context="{'group_by': 'fmcg_channel_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_fmcg_cost_revenue_report" model="ir.actions.act_window">
+        <field name="name">Cost vs Revenue</field>
+        <field name="res_model">fmcg.cost.revenue.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="view_fmcg_cost_revenue_report_search"/>
+    </record>
+    <menuitem id="menu_fmcg_cost_revenue_report" name="Cost vs Revenue" parent="menu_fmcg_reports" action="action_fmcg_cost_revenue_report" sequence="10"/>
+
+    <!-- Brand Sales -->
+    <record id="view_fmcg_brand_sales_report_list" model="ir.ui.view">
+        <field name="name">fmcg.brand.sales.report.list</field>
+        <field name="model">fmcg.brand.sales.report</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="fmcg_brand_id"/>
+                <field name="fmcg_channel_id"/>
+                <field name="team_id"/>
+                <field name="salesperson_id"/>
+                <field name="quantity" sum="Quantity"/>
+                <field name="net_revenue" sum="Net Revenue"/>
+                <field name="discounts" sum="Discounts"/>
+                <field name="returns" sum="Returns"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_fmcg_brand_sales_report_pivot" model="ir.ui.view">
+        <field name="name">fmcg.brand.sales.report.pivot</field>
+        <field name="model">fmcg.brand.sales.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="fmcg_brand_id" type="row"/>
+                <field name="fmcg_channel_id" type="col"/>
+                <field name="quantity" type="measure"/>
+                <field name="net_revenue" type="measure"/>
+                <field name="discounts" type="measure"/>
+                <field name="returns" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_fmcg_brand_sales_report_graph" model="ir.ui.view">
+        <field name="name">fmcg.brand.sales.report.graph</field>
+        <field name="model">fmcg.brand.sales.report</field>
+        <field name="arch" type="xml">
+            <graph type="bar">
+                <field name="fmcg_brand_id"/>
+                <field name="net_revenue" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="view_fmcg_brand_sales_report_search" model="ir.ui.view">
+        <field name="name">fmcg.brand.sales.report.search</field>
+        <field name="model">fmcg.brand.sales.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="date"/>
+                <field name="fmcg_brand_id"/>
+                <field name="fmcg_channel_id"/>
+                <field name="team_id"/>
+                <field name="salesperson_id"/>
+                <filter string="Brand" name="group_brand" context="{'group_by': 'fmcg_brand_id'}"/>
+                <filter string="Channel" name="group_channel" context="{'group_by': 'fmcg_channel_id'}"/>
+                <filter string="Sales Team" name="group_team" context="{'group_by': 'team_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_fmcg_brand_sales_report" model="ir.actions.act_window">
+        <field name="name">Brand Sales &amp; Revenue</field>
+        <field name="res_model">fmcg.brand.sales.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="view_fmcg_brand_sales_report_search"/>
+    </record>
+    <menuitem id="menu_fmcg_brand_sales_report" name="Brand Sales &amp; Revenue" parent="menu_fmcg_reports" action="action_fmcg_brand_sales_report" sequence="20"/>
+
+    <!-- Region Report -->
+    <record id="view_fmcg_region_report_list" model="ir.ui.view">
+        <field name="name">fmcg.region.report.list</field>
+        <field name="model">fmcg.region.report</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="fmcg_region_id"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_territory_id"/>
+                <field name="fmcg_zone_id"/>
+                <field name="fmcg_channel_id"/>
+                <field name="revenue" sum="Revenue"/>
+                <field name="collections" sum="Collections"/>
+                <field name="outstanding" sum="Outstanding"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_fmcg_region_report_pivot" model="ir.ui.view">
+        <field name="name">fmcg.region.report.pivot</field>
+        <field name="model">fmcg.region.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="fmcg_region_id" type="row"/>
+                <field name="fmcg_city_id" type="row"/>
+                <field name="fmcg_channel_id" type="col"/>
+                <field name="revenue" type="measure"/>
+                <field name="collections" type="measure"/>
+                <field name="outstanding" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_fmcg_region_report_search" model="ir.ui.view">
+        <field name="name">fmcg.region.report.search</field>
+        <field name="model">fmcg.region.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="date"/>
+                <field name="fmcg_region_id"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_territory_id"/>
+                <field name="fmcg_zone_id"/>
+                <field name="fmcg_channel_id"/>
+                <filter string="Region" name="group_region" context="{'group_by': 'fmcg_region_id'}"/>
+                <filter string="Town/City" name="group_city" context="{'group_by': 'fmcg_city_id'}"/>
+                <filter string="Territory" name="group_territory" context="{'group_by': 'fmcg_territory_id'}"/>
+                <filter string="Zone" name="group_zone" context="{'group_by': 'fmcg_zone_id'}"/>
+                <filter string="Channel" name="group_channel" context="{'group_by': 'fmcg_channel_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_fmcg_region_report" model="ir.actions.act_window">
+        <field name="name">Region-wise Report</field>
+        <field name="res_model">fmcg.region.report</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="search_view_id" ref="view_fmcg_region_report_search"/>
+    </record>
+    <menuitem id="menu_fmcg_region_report" name="Region-wise Report" parent="menu_fmcg_reports" action="action_fmcg_region_report" sequence="30"/>
+
+    <!-- Salesperson Report -->
+    <record id="view_fmcg_salesperson_report_list" model="ir.ui.view">
+        <field name="name">fmcg.salesperson.report.list</field>
+        <field name="model">fmcg.salesperson.report</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="salesperson_id"/>
+                <field name="team_id"/>
+                <field name="fmcg_brand_id"/>
+                <field name="fmcg_region_id"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_territory_id"/>
+                <field name="fmcg_zone_id"/>
+                <field name="fmcg_channel_id"/>
+                <field name="orders_count" sum="Orders"/>
+                <field name="revenue" sum="Revenue"/>
+                <field name="returns" sum="Returns"/>
+                <field name="collections" sum="Collections"/>
+                <field name="outstanding" sum="Outstanding"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_fmcg_salesperson_report_pivot" model="ir.ui.view">
+        <field name="name">fmcg.salesperson.report.pivot</field>
+        <field name="model">fmcg.salesperson.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="salesperson_id" type="row"/>
+                <field name="fmcg_brand_id" type="row"/>
+                <field name="fmcg_channel_id" type="col"/>
+                <field name="orders_count" type="measure"/>
+                <field name="revenue" type="measure"/>
+                <field name="returns" type="measure"/>
+                <field name="collections" type="measure"/>
+                <field name="outstanding" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_fmcg_salesperson_report_search" model="ir.ui.view">
+        <field name="name">fmcg.salesperson.report.search</field>
+        <field name="model">fmcg.salesperson.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="date"/>
+                <field name="salesperson_id"/>
+                <field name="team_id"/>
+                <field name="fmcg_brand_id"/>
+                <field name="fmcg_region_id"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_territory_id"/>
+                <field name="fmcg_zone_id"/>
+                <field name="fmcg_channel_id"/>
+                <filter string="Salesperson" name="group_salesperson" context="{'group_by': 'salesperson_id'}"/>
+                <filter string="Brand" name="group_brand" context="{'group_by': 'fmcg_brand_id'}"/>
+                <filter string="Region" name="group_region" context="{'group_by': 'fmcg_region_id'}"/>
+                <filter string="Territory" name="group_territory" context="{'group_by': 'fmcg_territory_id'}"/>
+                <filter string="Channel" name="group_channel" context="{'group_by': 'fmcg_channel_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_fmcg_salesperson_report" model="ir.actions.act_window">
+        <field name="name">Salesperson-wise Report</field>
+        <field name="res_model">fmcg.salesperson.report</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="search_view_id" ref="view_fmcg_salesperson_report_search"/>
+    </record>
+    <menuitem id="menu_fmcg_salesperson_report" name="Salesperson-wise Report" parent="menu_fmcg_reports" action="action_fmcg_salesperson_report" sequence="40"/>
+
+    <!-- Brand P&L -->
+    <record id="view_fmcg_brand_pl_report_list" model="ir.ui.view">
+        <field name="name">fmcg.brand.pl.report.list</field>
+        <field name="model">fmcg.brand.pl.report</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="fmcg_brand_id"/>
+                <field name="revenue" sum="Revenue"/>
+                <field name="cogs" sum="COGS"/>
+                <field name="expenses" sum="Expenses"/>
+                <field name="profit" sum="Profit"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_fmcg_brand_pl_report_pivot" model="ir.ui.view">
+        <field name="name">fmcg.brand.pl.report.pivot</field>
+        <field name="model">fmcg.brand.pl.report</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="fmcg_brand_id" type="row"/>
+                <field name="date" interval="month" type="col"/>
+                <field name="revenue" type="measure"/>
+                <field name="cogs" type="measure"/>
+                <field name="expenses" type="measure"/>
+                <field name="profit" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_fmcg_brand_pl_report_search" model="ir.ui.view">
+        <field name="name">fmcg.brand.pl.report.search</field>
+        <field name="model">fmcg.brand.pl.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="date"/>
+                <field name="fmcg_brand_id"/>
+                <filter string="Brand" name="group_brand" context="{'group_by': 'fmcg_brand_id'}"/>
+                <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_fmcg_brand_pl_report" model="ir.actions.act_window">
+        <field name="name">Brand P&amp;L</field>
+        <field name="res_model">fmcg.brand.pl.report</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="search_view_id" ref="view_fmcg_brand_pl_report_search"/>
+    </record>
+    <menuitem id="menu_fmcg_brand_pl_report" name="Brand P&amp;L" parent="menu_fmcg_reports" action="action_fmcg_brand_pl_report" sequence="50"/>
+</odoo>

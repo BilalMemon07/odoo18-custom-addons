@@ -1,17 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="product_template_custom" model="ir.ui.view">
-        <field name="name">product.template.custom</field>
+        <field name="name">product.template.custom.invoice.fields</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
-
             <xpath expr="//field[@name='type']" position="after">
-                <field name="ctn_size"/>
-                <field name="grams"/>
-                <field name="trade_price"/>
-                <field name="msrp"/>
+                <field name="show_custom_invoice_fields" invisible="1"/>
+                <field name="ctn_size" invisible="not show_custom_invoice_fields"/>
+                <field name="grams" invisible="not show_custom_invoice_fields"/>
+                <field name="trade_price" invisible="not show_custom_invoice_fields"/>
+                <field name="msrp" invisible="not show_custom_invoice_fields"/>
             </xpath>
-
         </field>
     </record>
 </odoo>

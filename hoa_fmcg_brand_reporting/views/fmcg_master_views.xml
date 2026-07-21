@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Brand -->
+    <record id="view_fmcg_brand_list" model="ir.ui.view">
+        <field name="name">fmcg.brand.list</field>
+        <field name="model">fmcg.brand</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="analytic_account_id"/>
+                <field name="income_account_id"/>
+                <field name="expense_account_id"/>
+                <field name="stock_valuation_account_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fmcg_brand_form" model="ir.ui.view">
+        <field name="name">fmcg.brand.form</field>
+        <field name="model">fmcg.brand</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_create_analytic_account" type="object" string="Create Analytic Account" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Analytics and Accounts">
+                            <field name="analytic_account_id"/>
+                            <field name="income_account_id"/>
+                            <field name="expense_account_id"/>
+                            <field name="stock_valuation_account_id"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fmcg_brand" model="ir.actions.act_window">
+        <field name="name">Brands</field>
+        <field name="res_model">fmcg.brand</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="menu_fmcg_brand" name="Brands" parent="menu_fmcg_configuration" action="action_fmcg_brand" sequence="10"/>
+
+    <!-- Existing Geo masters from odoo_genics_x_amin_enterprise_ext are reused here. -->
+    <menuitem id="menu_fmcg_geo_region" name="Regions" parent="menu_fmcg_configuration" action="odoo_genics_x_amin_enterprise_ext.action_ib_geo_region" sequence="20"/>
+    <menuitem id="menu_fmcg_geo_zone" name="Zones" parent="menu_fmcg_configuration" action="odoo_genics_x_amin_enterprise_ext.action_ib_geo_zone" sequence="30"/>
+    <menuitem id="menu_fmcg_geo_territory" name="Territories" parent="menu_fmcg_configuration" action="odoo_genics_x_amin_enterprise_ext.action_ib_geo_territory" sequence="40"/>
+    <menuitem id="menu_fmcg_geo_town" name="Towns / Cities" parent="menu_fmcg_configuration" action="odoo_genics_x_amin_enterprise_ext.action_ib_geo_town" sequence="50"/>
+
+    <!-- Sales Channel -->
+    <record id="view_fmcg_sales_channel_list" model="ir.ui.view">
+        <field name="name">fmcg.sales.channel.list</field>
+        <field name="model">fmcg.sales.channel</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fmcg_sales_channel_form" model="ir.ui.view">
+        <field name="name">fmcg.sales.channel.form</field>
+        <field name="model">fmcg.sales.channel</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="code"/>
+                        <field name="sequence"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fmcg_sales_channel" model="ir.actions.act_window">
+        <field name="name">Sales Channels</field>
+        <field name="res_model">fmcg.sales.channel</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="menu_fmcg_sales_channel" name="Sales Channels" parent="menu_fmcg_configuration" action="action_fmcg_sales_channel" sequence="60"/>
+</odoo>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_account_move_form_fmcg" model="ir.ui.view">
+        <field name="name">account.move.form.fmcg</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="show_fmcg_fields" invisible="1"/>
+                <field name="fmcg_region_id" invisible="not show_fmcg_fields"/>
+                <field name="fmcg_zone_id" invisible="not show_fmcg_fields" domain="[('region_id', '=', fmcg_region_id)]"/>
+                <field name="fmcg_territory_id" invisible="not show_fmcg_fields" domain="[('zone_id', '=', fmcg_zone_id)]"/>
+                <field name="fmcg_city_id" invisible="not show_fmcg_fields" domain="[('territory_id', '=', fmcg_territory_id)]"/>
+                <field name="fmcg_channel_id" invisible="not show_fmcg_fields"/>
+            </xpath>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='product_id']" position="after">
+                <field name="fmcg_brand_id" optional="show" column_invisible="not parent.show_fmcg_fields"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_account_invoice_filter_fmcg" model="ir.ui.view">
+        <field name="name">account.move.search.fmcg</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="fmcg_region_id" string="Region"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_zone_id" string="Zone"/>
+                <field name="fmcg_territory_id" string="Territory"/>
+                <field name="fmcg_channel_id" string="Channel"/>
+                <filter string="Region" name="group_by_fmcg_region" context="{'group_by': 'fmcg_region_id'}"/>
+                <filter string="Town/City" name="group_by_fmcg_city" context="{'group_by': 'fmcg_city_id'}"/>
+                <filter string="Zone" name="group_by_fmcg_zone" context="{'group_by': 'fmcg_zone_id'}"/>
+                <filter string="Territory" name="group_by_fmcg_territory" context="{'group_by': 'fmcg_territory_id'}"/>
+                <filter string="Channel" name="group_by_fmcg_channel" context="{'group_by': 'fmcg_channel_id'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

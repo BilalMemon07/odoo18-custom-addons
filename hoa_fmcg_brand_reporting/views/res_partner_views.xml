@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_partner_form_fmcg_channel" model="ir.ui.view">
+        <field name="name">res.partner.form.fmcg.channel</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="odoo_genics_x_amin_enterprise_ext.view_partner_form_geo_location_inherit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='geo_region_id']" position="after">
+                <field name="show_fmcg_fields" invisible="1"/>
+                <field name="fmcg_channel_id" invisible="not show_fmcg_fields"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_partner_list_fmcg" model="ir.ui.view">
+        <field name="name">res.partner.list.fmcg</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='phone']" position="after">
+                <field name="fmcg_region_id" optional="hide"/>
+                <field name="fmcg_zone_id" optional="hide"/>
+                <field name="fmcg_territory_id" optional="hide"/>
+                <field name="fmcg_city_id" optional="hide"/>
+                <field name="fmcg_channel_id" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_partner_search_fmcg" model="ir.ui.view">
+        <field name="name">res.partner.search.fmcg</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="fmcg_region_id" string="Region"/>
+                <field name="fmcg_zone_id" string="Zone"/>
+                <field name="fmcg_territory_id" string="Territory"/>
+                <field name="fmcg_city_id" string="Town/City"/>
+                <field name="fmcg_channel_id" string="Channel"/>
+                <filter string="Region" name="group_by_fmcg_region" context="{'group_by': 'fmcg_region_id'}"/>
+                <filter string="Zone" name="group_by_fmcg_zone" context="{'group_by': 'fmcg_zone_id'}"/>
+                <filter string="Territory" name="group_by_fmcg_territory" context="{'group_by': 'fmcg_territory_id'}"/>
+                <filter string="Town/City" name="group_by_fmcg_city" context="{'group_by': 'fmcg_city_id'}"/>
+                <filter string="Channel" name="group_by_fmcg_channel" context="{'group_by': 'fmcg_channel_id'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <record id="fmcg_attr_packaging_type" model="product.attribute">
+        <field name="name">Packaging Type</field>
+        <field name="create_variant">always</field>
+    </record>
+    <record id="fmcg_attr_packaging_standard" model="product.attribute.value">
+        <field name="name">Standard Packaging</field>
+        <field name="attribute_id" ref="fmcg_attr_packaging_type"/>
+    </record>
+    <record id="fmcg_attr_packaging_custom" model="product.attribute.value">
+        <field name="name">Custom / Special Packaging</field>
+        <field name="attribute_id" ref="fmcg_attr_packaging_type"/>
+    </record>
+</odoo>

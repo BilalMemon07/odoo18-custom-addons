@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_hr_expense_form_fmcg" model="ir.ui.view">
+        <field name="name">hr.expense.form.fmcg</field>
+        <field name="model">hr.expense</field>
+        <field name="inherit_id" ref="hr_expense.hr_expense_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_id']" position="after">
+                <field name="show_fmcg_fields" invisible="1"/>
+                <field name="fmcg_brand_id" invisible="not show_fmcg_fields"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
