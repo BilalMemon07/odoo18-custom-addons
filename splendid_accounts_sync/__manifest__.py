@@ -1,9 +1,9 @@
 {
     "name": "Splendid Accounts Sync",
-    "summary": "Import Splendid Accounts masters and transactions into Odoo",
-    "version": "18.0.2.0.0",
+    "summary": "Import Splendid Accounts master data and sales process into Odoo",
+    "version": "18.0.4.0.0",
     "category": "Accounting/Accounting",
-    "author": "Ideabox Technology",
+    "author": "Devix Technology",
     "license": "LGPL-3",
     "depends": [
         "base",
@@ -11,10 +11,9 @@
         "contacts",
         "account",
         "product",
-        "sale_management",
-        "purchase",
         "stock",
-        "mrp",
+        "sale_management",
+        "sale_stock",
     ],
     "data": [
         "security/ir.model.access.csv",

@@ -32,139 +32,92 @@ class SplendidAccountConnection(models.Model):
     page_size = fields.Integer(default=100)
     timeout = fields.Integer(default=60)
     verify_ssl = fields.Boolean(default=True)
-    import_as_draft = fields.Boolean(
-        default=True,
-        help="Recommended for first sync. Odoo will create draft accounting documents for review.",
-    )
-    auto_post_moves = fields.Boolean(
-        default=False,
-        help="Post created accounting entries after import. Use only after validating account/tax mapping.",
-    )
-    force_splendid_accounts = fields.Boolean(
-        string="Force Splendid Accounts",
-        default=True,
-        help="When Splendid sends accountId/account object on a transaction line, use the imported Splendid account. "
-             "If the account cannot be resolved, the line is logged as an error instead of silently using a default account.",
-    )
-    auto_fetch_missing_accounts = fields.Boolean(
-        string="Auto Fetch Missing Accounts",
-        default=True,
-        help="If a transaction references a Splendid account that is not yet mapped in Odoo, fetch /Accounts/{id} and import it automatically.",
-    )
-    update_existing_draft_records = fields.Boolean(
-        string="Update Existing Draft Records",
-        default=True,
-        help="When re-syncing, update already imported draft invoices, payments and journal entries so corrected Splendid account mapping is applied.",
-    )
-    sync_inventory_snapshot = fields.Boolean(
-        string="Sync Inventory Snapshot",
-        default=True,
-        help="Read Products/Inventory and adjust Odoo on-hand quantity to match Splendid per product/warehouse.",
-    )
-    auto_validate_stock_pickings = fields.Boolean(
-        string="Auto Validate Stock Pickings",
-        default=False,
-        help="Validate imported stock movements/adjustments automatically. Keep disabled until testing is completed.",
-    )
-    auto_confirm_mrp = fields.Boolean(
-        string="Auto Confirm Manufacturing Orders",
-        default=False,
-        help="Confirm imported manufacturing orders after creation. Keep disabled for first sync.",
-    )
+
+    last_master_sync = fields.Datetime(copy=False)
+    last_chart_accounts_sync = fields.Datetime(copy=False, string="Last Chart of Accounts Sync")
+    last_customers_sync = fields.Datetime(copy=False, string="Last Customers Sync")
+    last_vendors_sync = fields.Datetime(copy=False, string="Last Vendors Sync")
+    last_products_sync = fields.Datetime(copy=False, string="Last Products Sync")
+    last_get_products_sync = fields.Datetime(copy=False, string="Last Get Products Sync")
+    last_warehouses_sync = fields.Datetime(copy=False, string="Last Warehouses Sync")
+    last_bank_accounts_sync = fields.Datetime(copy=False, string="Last Bank Accounts Sync")
+    last_taxes_sync = fields.Datetime(copy=False, string="Last Taxes Sync")
+
+    # Kept for backward compatibility with previous module versions/views/crons.
+    last_transaction_sync = fields.Datetime(copy=False)
+    last_inventory_sync = fields.Datetime(copy=False)
+    last_manufacturing_sync = fields.Datetime(copy=False)
+    last_full_sync = fields.Datetime(copy=False)
+
+    chart_accounts_fetched_count = fields.Integer(copy=False, readonly=True)
+    chart_accounts_imported_count = fields.Integer(copy=False, readonly=True)
+    chart_accounts_failed_count = fields.Integer(copy=False, readonly=True)
+    customers_fetched_count = fields.Integer(copy=False, readonly=True)
+    customers_imported_count = fields.Integer(copy=False, readonly=True)
+    customers_failed_count = fields.Integer(copy=False, readonly=True)
+    vendors_fetched_count = fields.Integer(copy=False, readonly=True)
+    vendors_imported_count = fields.Integer(copy=False, readonly=True)
+    vendors_failed_count = fields.Integer(copy=False, readonly=True)
+    products_fetched_count = fields.Integer(copy=False, readonly=True)
+    products_imported_count = fields.Integer(copy=False, readonly=True)
+    products_failed_count = fields.Integer(copy=False, readonly=True)
+    warehouses_fetched_count = fields.Integer(copy=False, readonly=True)
+    warehouses_imported_count = fields.Integer(copy=False, readonly=True)
+    warehouses_failed_count = fields.Integer(copy=False, readonly=True)
+    bank_accounts_fetched_count = fields.Integer(copy=False, readonly=True)
+    bank_accounts_imported_count = fields.Integer(copy=False, readonly=True)
+    bank_accounts_failed_count = fields.Integer(copy=False, readonly=True)
+    taxes_fetched_count = fields.Integer(copy=False, readonly=True)
+    taxes_imported_count = fields.Integer(copy=False, readonly=True)
+    taxes_failed_count = fields.Integer(copy=False, readonly=True)
+
+    sync_from_date = fields.Date(string="From Date")
+    sync_to_date = fields.Date(string="To Date")
+    auto_confirm_sale_orders = fields.Boolean(string="Confirm Sale Orders", default=True)
+    auto_post_sale_invoices = fields.Boolean(string="Post Sale Invoices / Credit Notes", default=True)
+    auto_create_sale_deliveries = fields.Boolean(string="Create Sale Deliveries", default=True)
+    auto_validate_sale_deliveries = fields.Boolean(string="Validate Sale Deliveries", default=False)
+    auto_create_return_transfers = fields.Boolean(string="Create Return Transfers", default=True)
+    auto_validate_return_transfers = fields.Boolean(string="Validate Return Transfers", default=False)
+    auto_post_customer_payments = fields.Boolean(string="Post Customer Payments", default=True)
+    auto_reconcile_customer_payments = fields.Boolean(string="Reconcile Customer Payments", default=True)
 
     sale_journal_id = fields.Many2one("account.journal", domain="[('type','=','sale'), ('company_id','=',company_id)]")
-    purchase_journal_id = fields.Many2one("account.journal", domain="[('type','=','purchase'), ('company_id','=',company_id)]")
     bank_journal_id = fields.Many2one("account.journal", domain="[('type','in',('bank','cash')), ('company_id','=',company_id)]")
-    misc_journal_id = fields.Many2one("account.journal", domain="[('type','=','general'), ('company_id','=',company_id)]")
+
+    last_sales_process_sync = fields.Datetime(copy=False, string="Last Sales Process Sync")
+    last_sale_invoices_sync = fields.Datetime(copy=False, string="Last Sale Invoices Sync")
+    last_sale_returns_sync = fields.Datetime(copy=False, string="Last Sale Returns Sync")
+    last_customer_payments_sync = fields.Datetime(copy=False, string="Last Customer Payments Sync")
+
+    sale_invoices_fetched_count = fields.Integer(copy=False, readonly=True)
+    sale_invoices_imported_count = fields.Integer(copy=False, readonly=True)
+    sale_invoices_failed_count = fields.Integer(copy=False, readonly=True)
+    sale_returns_fetched_count = fields.Integer(copy=False, readonly=True)
+    sale_returns_imported_count = fields.Integer(copy=False, readonly=True)
+    sale_returns_failed_count = fields.Integer(copy=False, readonly=True)
+    customer_payments_fetched_count = fields.Integer(copy=False, readonly=True)
+    customer_payments_imported_count = fields.Integer(copy=False, readonly=True)
+    customer_payments_failed_count = fields.Integer(copy=False, readonly=True)
+
     default_receivable_account_id = fields.Many2one("account.account", domain="[('account_type','=','asset_receivable'), ('deprecated','=',False)]")
     default_payable_account_id = fields.Many2one("account.account", domain="[('account_type','=','liability_payable'), ('deprecated','=',False)]")
     default_income_account_id = fields.Many2one("account.account", domain="[('account_type','in',('income','income_other')), ('deprecated','=',False)]")
     default_expense_account_id = fields.Many2one("account.account", domain="[('account_type','in',('expense','expense_direct_cost')), ('deprecated','=',False)]")
     default_stock_account_id = fields.Many2one("account.account", domain="[('account_type','in',('asset_current','asset_fixed')), ('deprecated','=',False)]")
-    default_suspense_account_id = fields.Many2one("account.account", domain="[('deprecated','=',False)]")
 
-    last_master_sync = fields.Datetime(copy=False)
-    last_transaction_sync = fields.Datetime(copy=False)
-    last_inventory_sync = fields.Datetime(copy=False)
-    last_manufacturing_sync = fields.Datetime(copy=False)
-    last_chart_accounts_sync = fields.Datetime(copy=False, string="Last Chart of Accounts Sync")
-    last_customers_sync = fields.Datetime(copy=False, string="Last Customers Sync")
-    last_vendors_sync = fields.Datetime(copy=False, string="Last Vendors Sync")
-    last_products_sync = fields.Datetime(copy=False, string="Last Products Sync")
-    last_warehouses_sync = fields.Datetime(copy=False, string="Last Warehouses Sync")
-    last_inventory_snapshot_sync = fields.Datetime(copy=False, string="Last Inventory Snapshot Sync")
-    last_inventory_adjustments_sync = fields.Datetime(copy=False, string="Last Inventory Adjustments Sync")
-    last_stock_movements_sync = fields.Datetime(copy=False, string="Last Stock Movements Sync")
-    last_boms_sync = fields.Datetime(copy=False, string="Last BOMs Sync")
-    last_manufacturing_orders_sync = fields.Datetime(copy=False, string="Last Manufacturing Orders Sync")
-    last_sales_sync = fields.Datetime(copy=False, string="Last Sales Sync")
-    last_sale_returns_sync = fields.Datetime(copy=False, string="Last Sales Returns Sync")
-    last_purchases_sync = fields.Datetime(copy=False, string="Last Purchases Sync")
-    last_purchase_returns_sync = fields.Datetime(copy=False, string="Last Purchase Returns Sync")
-    last_customer_receipts_sync = fields.Datetime(copy=False, string="Last Customer Receipts Sync")
-    last_vendor_payments_sync = fields.Datetime(copy=False, string="Last Vendor Payments Sync")
-    last_journal_entries_sync = fields.Datetime(copy=False, string="Last Journal Entries Sync")
-    last_expenses_sync = fields.Datetime(copy=False, string="Last Expenses Sync")
-    last_full_sync = fields.Datetime(copy=False)
     log_ids = fields.One2many("splendid.sync.log", "connection_id")
     mapping_ids = fields.One2many("splendid.sync.map", "connection_id")
 
-    # Splendid tags/endpoints confirmed from the provided OpenAPI JSON.
     MASTER_ENDPOINTS = {
         "chart_accounts": "/Accounts",
         "customers": "/Customers",
         "vendors": "/Vendors",
         "products": "/Products",
-        "warehouses": "/Entities/Warehouses",
+        "warehouses": "/api/{tenant}/{branch}/Entities/Warehouses",
+        "bank_accounts": "/api/{tenant}/{branch}/BankAccounts",
+        "taxes": "/api/{tenant}/Taxes",
     }
-    INVENTORY_ENDPOINTS = {
-        "inventory_adjustments": "/InventoryAdjustments",
-        "stock_movements": "/StocksMovement",
-    }
-    MANUFACTURING_ENDPOINTS = {
-        "manufacturing_orders": "/JobOrders",
-    }
-    TRANSACTION_ENDPOINTS = {
-        "sales": "/SaleInvoices",
-        "sale_returns": "/SaleReturns",
-        "purchases": "/PurchaseInvoices",
-        "purchase_returns": "/PurchaseReturns",
-        "customer_receipts": "/CustomerPayments",
-        "vendor_payments": "/VendorPayments",
-        "journal_entries": "/JournalEntries",
-        "expenses": "/Expenses",
-    }
-
-    SINGLE_SYNC_ENDPOINTS = {}
-    SINGLE_SYNC_ENDPOINTS.update(MASTER_ENDPOINTS)
-    SINGLE_SYNC_ENDPOINTS.update(INVENTORY_ENDPOINTS)
-    SINGLE_SYNC_ENDPOINTS.update(MANUFACTURING_ENDPOINTS)
-    SINGLE_SYNC_ENDPOINTS.update(TRANSACTION_ENDPOINTS)
-
-    SINGLE_SYNC_LAST_FIELDS = {
-        "chart_accounts": "last_chart_accounts_sync",
-        "customers": "last_customers_sync",
-        "vendors": "last_vendors_sync",
-        "products": "last_products_sync",
-        "warehouses": "last_warehouses_sync",
-        "inventory_snapshot": "last_inventory_snapshot_sync",
-        "inventory_adjustments": "last_inventory_adjustments_sync",
-        "stock_movements": "last_stock_movements_sync",
-        "boms": "last_boms_sync",
-        "manufacturing_orders": "last_manufacturing_orders_sync",
-        "sales": "last_sales_sync",
-        "sale_returns": "last_sale_returns_sync",
-        "purchases": "last_purchases_sync",
-        "purchase_returns": "last_purchase_returns_sync",
-        "customer_receipts": "last_customer_receipts_sync",
-        "vendor_payments": "last_vendor_payments_sync",
-        "journal_entries": "last_journal_entries_sync",
-        "expenses": "last_expenses_sync",
-    }
-
-    def _company_domain(self):
-        self.ensure_one()
-        return ["|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)]
 
     def _with_target_company(self):
         self.ensure_one()
@@ -176,16 +129,13 @@ class SplendidAccountConnection(models.Model):
     @api.onchange("company_id")
     def _onchange_company_id(self):
         for rec in self:
-            rec.sale_journal_id = False
-            rec.purchase_journal_id = False
-            rec.bank_journal_id = False
-            rec.misc_journal_id = False
             rec.default_receivable_account_id = False
             rec.default_payable_account_id = False
             rec.default_income_account_id = False
             rec.default_expense_account_id = False
             rec.default_stock_account_id = False
-            rec.default_suspense_account_id = False
+            rec.sale_journal_id = False
+            rec.bank_journal_id = False
 
     def _headers(self):
         self.ensure_one()
@@ -223,7 +173,6 @@ class SplendidAccountConnection(models.Model):
             response.raise_for_status()
         except requests.exceptions.RequestException as exc:
             raise UserError(_("Splendid API request failed: %s") % exc) from exc
-
         if not response.content:
             return {}
         try:
@@ -248,7 +197,8 @@ class SplendidAccountConnection(models.Model):
             for value in data.values():
                 if isinstance(value, list):
                     return value
-            if any(k.lower() in data for k in ("id", "code", "number", "name")):
+            lower_keys = {str(k).lower() for k in data.keys()}
+            if any(k in lower_keys for k in ("id", "code", "number", "name")):
                 return [data]
         return []
 
@@ -298,29 +248,64 @@ class SplendidAccountConnection(models.Model):
         raw = json.dumps(payload or {}, sort_keys=True, default=str)
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-    def _parse_date(self, value):
-        if not value:
-            return fields.Date.context_today(self)
-        if isinstance(value, datetime):
-            return value.date()
-        if isinstance(value, str):
-            value = value.replace("Z", "+00:00")
-            try:
-                return datetime.fromisoformat(value).date()
-            except ValueError:
-                return value[:10]
-        return value
+    def _company_partner(self):
+        return self.company_id.partner_id
+
+    def _account_company_domain(self):
+        account_fields = self.env["account.account"]._fields
+        if "company_id" in account_fields:
+            return [("company_id", "=", self.company_id.id)]
+        if "company_ids" in account_fields:
+            return [("company_ids", "in", self.company_id.id)]
+        return []
+
+    def _clean_account_code(self, code):
+        code = str(code or "").strip()
+        code = re.sub(r"[\s\-_/]+", ".", code)
+        code = re.sub(r"[^A-Za-z0-9.]", "", code)
+        code = re.sub(r"\.+", ".", code).strip(".")
+        return code[:64]
+
+    def _clean_product_code(self, value, fallback=False):
+        code = str(value or fallback or "").strip()
+        if not code:
+            return False
+        return re.sub(r"\s+", " ", code)[:100]
+
+    def _safe_float(self, value, default=0.0):
+        if value in (False, None, ""):
+            return default
+        if isinstance(value, (int, float)):
+            return float(value)
+        text = re.sub(r"[^0-9.\-]", "", str(value).strip())
+        if text in ("", ".", "-", "-."):
+            return default
+        try:
+            return float(text)
+        except ValueError:
+            return default
+
+    def _safe_bool(self, value, default=False):
+        if value in (False, None, ""):
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        text = str(value).strip().lower()
+        if text in ("true", "1", "yes", "y", "active"):
+            return True
+        if text in ("false", "0", "no", "n", "inactive"):
+            return False
+        return default
 
     def _map_search(self, external_model, external_id, odoo_model):
-        return self.env["splendid.sync.map"].sudo().search(
-            [
-                ("connection_id", "=", self.id),
-                ("external_model", "=", external_model),
-                ("external_id", "=", str(external_id)),
-                ("odoo_model", "=", odoo_model),
-            ],
-            limit=1,
-        )
+        return self.env["splendid.sync.map"].sudo().search([
+            ("connection_id", "=", self.id),
+            ("external_model", "=", external_model),
+            ("external_id", "=", str(external_id)),
+            ("odoo_model", "=", odoo_model),
+        ], limit=1)
 
     def _mapped_record(self, external_model, external_id, odoo_model):
         mapping = self._map_search(external_model, external_id, odoo_model)
@@ -349,37 +334,58 @@ class SplendidAccountConnection(models.Model):
         return mapping
 
     def _log(self, sync_type, state, message=None, payload=None, external_id=None, record=None):
-        self.env["splendid.sync.log"].with_company(self.company_id).sudo().create(
-            {
-                "connection_id": self.id,
-                "sync_type": sync_type,
-                "state": state,
-                "message": message,
-                "payload": payload,
-                "external_id": str(external_id or ""),
-                "odoo_model": record._name if record else False,
-                "res_id": record.id if record else False,
-            }
-        )
+        self.env["splendid.sync.log"].with_company(self.company_id).sudo().create({
+            "connection_id": self.id,
+            "sync_type": sync_type,
+            "state": state,
+            "message": message,
+            "payload": payload,
+            "external_id": str(external_id or ""),
+            "odoo_model": record._name if record else False,
+            "res_id": record.id if record else False,
+        })
 
-    def _default_journal(self, journal_type):
-        journal = {
-            "sale": self.sale_journal_id,
-            "purchase": self.purchase_journal_id,
-            "bank": self.bank_journal_id,
-            "general": self.misc_journal_id,
-        }.get(journal_type)
-        if journal:
-            return journal
-        domain = [("company_id", "=", self.company_id.id)]
-        if journal_type == "bank":
-            domain.append(("type", "in", ("bank", "cash")))
-        else:
-            domain.append(("type", "=", journal_type))
-        journal = self.env["account.journal"].with_company(self.company_id).search(domain, limit=1)
-        if not journal:
-            raise UserError(_("Please configure a %s journal for Splendid sync.") % journal_type)
-        return journal
+    def _set_count(self, key, fetched, imported, failed):
+        field_vals = {}
+        for suffix, value in (("fetched_count", fetched), ("imported_count", imported), ("failed_count", failed)):
+            field_name = "%s_%s" % (key, suffix)
+            if field_name in self._fields:
+                field_vals[field_name] = value
+        if field_vals:
+            self.write(field_vals)
+
+    def _search_account_by_external_or_code(self, external_id=False, code=False):
+        Account = self.env["account.account"].with_company(self.company_id).sudo()
+        domain_company = self._account_company_domain()
+        if external_id not in (False, None, ""):
+            account = Account.search([("splendid_account_id", "=", str(external_id))] + domain_company, limit=1)
+            if account:
+                return account
+            mapped = self._mapped_record("account", external_id, "account.account")
+            if mapped:
+                return mapped
+        code = self._clean_account_code(code)
+        if code:
+            account = Account.search([("code", "=", code)] + domain_company, limit=1)
+            if account:
+                return account
+        return Account
+
+    def _resolve_account(self, external_id=False, code=False):
+        account = self._search_account_by_external_or_code(external_id, code)
+        if account:
+            return account
+        if external_id:
+            try:
+                payload = self._api_request("GET", "/Accounts/%s" % external_id)
+                rows = self._extract_list(payload)
+                if rows:
+                    return self._import_chart_accounts(rows[0])
+                if isinstance(payload, dict) and payload:
+                    return self._import_chart_accounts(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                _logger.warning("Could not fetch Splendid account %s: %s", external_id, exc)
+        return account
 
     def _default_account(self, kind):
         account = {
@@ -388,230 +394,19 @@ class SplendidAccountConnection(models.Model):
             "receivable": self.default_receivable_account_id,
             "payable": self.default_payable_account_id,
             "stock": self.default_stock_account_id,
-            "suspense": self.default_suspense_account_id,
         }.get(kind)
         if account:
             return account
-        account_type_map = {
+        type_map = {
             "income": ("income", "income_other"),
             "expense": ("expense", "expense_direct_cost"),
             "receivable": ("asset_receivable",),
             "payable": ("liability_payable",),
             "stock": ("asset_current", "asset_fixed"),
         }
-        account_types = account_type_map.get(kind) or ("asset_current", "expense")
-        domain = [("deprecated", "=", False), ("account_type", "in", account_types)]
-        account_fields = self.env["account.account"]._fields
-        if "company_id" in account_fields:
-            domain.append(("company_id", "=", self.company_id.id))
-        elif "company_ids" in account_fields:
-            domain.append(("company_ids", "in", self.company_id.id))
-        account = self.env["account.account"].with_company(self.company_id).search(domain, limit=1)
-        if not account:
-            raise UserError(_("Please configure a default %s account for Splendid sync.") % kind)
+        domain = [("deprecated", "=", False), ("account_type", "in", type_map.get(kind, ("asset_current",)))] + self._account_company_domain()
+        account = self.env["account.account"].with_company(self.company_id).sudo().search(domain, limit=1)
         return account
-
-    def _account_company_domain(self):
-        self.ensure_one()
-        account_fields = self.env["account.account"]._fields
-        if "company_id" in account_fields:
-            return [("company_id", "=", self.company_id.id)]
-        if "company_ids" in account_fields:
-            return [("company_ids", "in", self.company_id.id)]
-        return []
-
-    def _payload_has_account_reference(self, payload, id_keys=None, nested_keys=None, code_keys=None):
-        if not isinstance(payload, dict):
-            return False
-        id_keys = id_keys or ("accountId", "accountID", "account_id")
-        nested_keys = nested_keys or ("account",)
-        code_keys = code_keys or ("accountCode", "accountNumber", "accountNo")
-        for key in id_keys:
-            value = self._find_value(payload, key)
-            if value not in (False, None, ""):
-                return True
-        for key in nested_keys:
-            value = self._find_value(payload, key)
-            if isinstance(value, dict) and value:
-                return True
-        for key in code_keys:
-            value = self._find_value(payload, key)
-            if value not in (False, None, ""):
-                return True
-        return False
-
-    def _clean_account_code(self, code):
-        """Return an Odoo-safe account code.
-
-        Odoo account.account.code accepts only alphanumeric characters and dots.
-        Splendid sometimes sends codes with spaces, slashes, hyphens or other
-        separators, so we normalize those values before searching/creating
-        accounts.
-        """
-        code = str(code or "").strip()
-        code = re.sub(r"[\s\-_/]+", ".", code)
-        code = re.sub(r"[^A-Za-z0-9.]", "", code)
-        code = re.sub(r"\.+", ".", code).strip(".")
-        return code[:64]
-
-    def _get_payload_account_code(self, payload, external_id=False):
-        raw_code = self._find_value(payload, "code", "number", "accountCode", "accountNumber", "accountNo")
-        code = self._clean_account_code(raw_code)
-        if code:
-            return code
-
-        # If the API sends the account number inside the name/description, use it.
-        # Example: "GST/HST on Purchases - 118100" -> "118100".
-        for key in ("name", "displayName", "description"):
-            text = str(self._find_value(payload, key, default="") or "")
-            match = re.search(r"\b[A-Za-z]*\d[A-Za-z0-9.]*\b", text)
-            if match:
-                code = self._clean_account_code(match.group(0))
-                if code:
-                    return code
-
-        code = self._clean_account_code(external_id or self._external_id(payload))
-        if not code:
-            raise UserError(_("Invalid account code received from Splendid API."))
-        return code
-
-    def _search_account_by_code_or_external(self, external_id=None, code=None):
-        self.ensure_one()
-        Account = self.env["account.account"].with_company(self.company_id).sudo()
-        company_domain = self._account_company_domain()
-        if external_id not in (False, None, ""):
-            account = Account.search([("splendid_account_id", "=", str(external_id))] + company_domain, limit=1)
-            if account:
-                return account
-            mapped = self._mapped_record("account", external_id, "account.account")
-            if mapped:
-                return mapped
-        code = self._clean_account_code(code)
-        if code:
-            account = Account.search([("code", "=", code)] + company_domain, limit=1)
-            if account:
-                return account
-        return Account
-
-    def _resolve_splendid_account(self, payload, fallback_kind=False, required=False, id_keys=None, nested_keys=None, code_keys=None):
-        """Resolve the exact Splendid account from transaction/product payload.
-
-        Important: default/config accounts are used only when Splendid did not send any account reference.
-        If Splendid sends accountId/account and force_splendid_accounts is enabled, missing mapping becomes an error.
-        """
-        self.ensure_one()
-        if not isinstance(payload, dict):
-            return self._default_account(fallback_kind) if fallback_kind else self.env["account.account"]
-
-        id_keys = id_keys or ("accountId", "accountID", "account_id")
-        nested_keys = nested_keys or ("account",)
-        code_keys = code_keys or ("accountCode", "accountNumber", "accountNo")
-        has_reference = self._payload_has_account_reference(payload, id_keys, nested_keys, code_keys)
-
-        external_id = False
-        nested_account = {}
-        account_code = False
-
-        for key in id_keys:
-            value = self._find_value(payload, key)
-            if isinstance(value, dict):
-                nested_account = value
-                external_id = self._external_id(value)
-                break
-            if value not in (False, None, ""):
-                external_id = value
-                break
-
-        for key in nested_keys:
-            value = self._find_value(payload, key)
-            if isinstance(value, dict) and value:
-                nested_account = value
-                if not external_id:
-                    external_id = self._external_id(value)
-                account_code = self._find_value(value, "code", "number") or account_code
-                break
-
-        for key in code_keys:
-            value = self._find_value(payload, key)
-            if value not in (False, None, ""):
-                account_code = value
-                break
-
-        account = self._search_account_by_code_or_external(external_id, account_code)
-        if account:
-            return account
-
-        if nested_account:
-            return self._import_chart_accounts(nested_account)
-
-        if external_id and self.auto_fetch_missing_accounts:
-            try:
-                fetched = self._api_request("GET", "/Accounts/%s" % external_id)
-                rows = self._extract_list(fetched)
-                if rows:
-                    return self._import_chart_accounts(rows[0])
-                if isinstance(fetched, dict) and fetched:
-                    return self._import_chart_accounts(fetched)
-            except Exception as exc:  # pylint: disable=broad-except
-                _logger.warning("Could not auto-fetch Splendid account %s: %s", external_id, exc)
-
-        account = self._search_account_by_code_or_external(external_id, account_code)
-        if account:
-            return account
-
-        if has_reference and (required or self.force_splendid_accounts):
-            raise UserError(_("Splendid account could not be resolved. Account reference: %s / %s. Please run Sync Masters first or check account mapping.") % (external_id or "", account_code or ""))
-
-        return self._default_account(fallback_kind) if fallback_kind else self.env["account.account"]
-
-    def _resolve_named_account(self, payload, id_key, nested_key, fallback_kind=False, required=False):
-        return self._resolve_splendid_account(
-            payload,
-            fallback_kind=fallback_kind,
-            required=required,
-            id_keys=(id_key,),
-            nested_keys=(nested_key,),
-            code_keys=("%sCode" % nested_key, "%sNumber" % nested_key),
-        )
-
-    def _apply_partner_control_account(self, partner, payload, move_type):
-        if not partner or not payload:
-            return False
-        account = self._resolve_splendid_account(payload, fallback_kind=False, required=False)
-        if not account:
-            return False
-        if move_type.startswith("out_") and account.account_type == "asset_receivable":
-            partner.with_company(self.company_id).sudo().property_account_receivable_id = account.id
-            return True
-        if move_type.startswith("in_") and account.account_type == "liability_payable":
-            partner.with_company(self.company_id).sudo().property_account_payable_id = account.id
-            return True
-        return False
-
-    def _resolve_journal_for_payment(self, payload, payment_type):
-        self.ensure_one()
-        detail_keys = ("customerPaymentDetails", "vendorPaymentDetails", "paymentDetails", "details")
-        account = self.env["account.account"]
-        for detail_key in detail_keys:
-            details = self._find_value(payload, detail_key) or []
-            if isinstance(details, list):
-                for detail in details:
-                    account = self._resolve_splendid_account(detail, fallback_kind=False, required=False)
-                    if account:
-                        break
-            if account:
-                break
-        if not account:
-            account = self._resolve_splendid_account(payload, fallback_kind=False, required=False)
-        if account:
-            journal = self.env["account.journal"].with_company(self.company_id).sudo().search([
-                ("company_id", "=", self.company_id.id),
-                ("type", "in", ("bank", "cash")),
-                ("default_account_id", "=", account.id),
-            ], limit=1)
-            if journal:
-                return journal
-        return self._default_journal("bank")
 
     def action_test_connection(self):
         for rec in self:
@@ -620,193 +415,115 @@ class SplendidAccountConnection(models.Model):
             rec.message_post(body=_("Splendid connection successful. Response preview: %s") % json.dumps(data, default=str)[:500])
         return True
 
-    def _action_sync_single(self, sync_type):
-        for rec in self:
-            rec._with_target_company()._sync_single_model(sync_type)
-        return True
-
-    def action_sync_chart_accounts(self):
-        return self._action_sync_single("chart_accounts")
-
-    def action_sync_customers(self):
-        return self._action_sync_single("customers")
-
-    def action_sync_vendors(self):
-        return self._action_sync_single("vendors")
-
-    def action_sync_products(self):
-        return self._action_sync_single("products")
-
-    def action_sync_warehouses(self):
-        return self._action_sync_single("warehouses")
-
-    def action_sync_inventory_snapshot(self):
-        return self._action_sync_single("inventory_snapshot")
-
-    def action_sync_inventory_adjustments(self):
-        return self._action_sync_single("inventory_adjustments")
-
-    def action_sync_stock_movements(self):
-        return self._action_sync_single("stock_movements")
-
-    def action_sync_boms(self):
-        return self._action_sync_single("boms")
-
-    def action_sync_manufacturing_orders(self):
-        return self._action_sync_single("manufacturing_orders")
-
-    def action_sync_sales(self):
-        return self._action_sync_single("sales")
-
-    def action_sync_sale_returns(self):
-        return self._action_sync_single("sale_returns")
-
-    def action_sync_purchases(self):
-        return self._action_sync_single("purchases")
-
-    def action_sync_purchase_returns(self):
-        return self._action_sync_single("purchase_returns")
-
-    def action_sync_customer_receipts(self):
-        return self._action_sync_single("customer_receipts")
-
-    def action_sync_vendor_payments(self):
-        return self._action_sync_single("vendor_payments")
-
-    def action_sync_journal_entries(self):
-        return self._action_sync_single("journal_entries")
-
-    def action_sync_expenses(self):
-        return self._action_sync_single("expenses")
-
     def action_sync_masters(self):
-        for rec in self:
-            rec._with_target_company()._sync_masters()
-        return True
-
-    def action_sync_transactions(self):
-        for rec in self:
-            rec._with_target_company()._sync_transactions()
-        return True
-
-    def action_sync_inventory(self):
-        for rec in self:
-            rec._with_target_company()._sync_inventory()
-        return True
-
-    def action_sync_manufacturing(self):
-        for rec in self:
-            rec._with_target_company()._sync_manufacturing()
-        return True
-
-    def action_sync_all(self):
         for rec in self:
             rec = rec._with_target_company()
             rec._sync_masters()
-            rec._sync_boms()
-            rec._sync_inventory()
-            rec._sync_manufacturing()
-            rec._sync_transactions()
-            rec.last_full_sync = fields.Datetime.now()
         return True
+
+    def action_get_products(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_master_model("products")
+            rec.last_get_products_sync = fields.Datetime.now()
+        return True
+
+    def action_sync_sales_process(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_sales_process()
+        return True
+
+    def action_sync_sale_invoices(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_sale_invoices()
+        return True
+
+    def action_sync_sale_returns(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_sale_returns()
+        return True
+
+    def action_sync_customer_payments(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_customer_payments()
+        return True
+
+    # Backward-compatible methods. These no longer sync transactions or inventory.
+    def action_sync_transactions(self):
+        raise UserError(_("Transaction sync has been removed from this master-data-only version. Use Sync Master Data."))
+
+    def action_sync_inventory(self):
+        raise UserError(_("Inventory sync has been removed from this master-data-only version. Use Sync Master Data."))
+
+    def action_sync_manufacturing(self):
+        raise UserError(_("Manufacturing sync has been removed from this master-data-only version. Use Sync Master Data."))
+
+    def action_sync_all(self):
+        return self.action_sync_masters()
 
     @api.model
     def cron_sync_all_active(self):
-        connections = self.search([("active", "=", True)])
-        for connection in connections:
+        for connection in self.search([("active", "=", True)]):
             try:
-                connection._with_target_company().action_sync_all()
+                connection._with_target_company()._sync_masters()
             except Exception as exc:  # pylint: disable=broad-except
                 _logger.exception("Splendid cron failed for %s", connection.display_name)
                 connection._log("cron", "error", str(exc))
 
     def _sync_masters(self):
         self.ensure_one()
-        for sync_type in self.MASTER_ENDPOINTS:
-            self._sync_single_model(sync_type)
+        for key in ("chart_accounts", "customers", "vendors", "products", "warehouses", "bank_accounts", "taxes"):
+            self._sync_master_model(key)
         self.last_master_sync = fields.Datetime.now()
-
-    def _sync_transactions(self):
-        self.ensure_one()
-        for sync_type in self.TRANSACTION_ENDPOINTS:
-            self._sync_single_model(sync_type)
-        self.last_transaction_sync = fields.Datetime.now()
-
-    def _sync_inventory(self):
-        self.ensure_one()
-        if self.sync_inventory_snapshot:
-            self._sync_single_model("inventory_snapshot")
-        for sync_type in self.INVENTORY_ENDPOINTS:
-            self._sync_single_model(sync_type)
-        self.last_inventory_sync = fields.Datetime.now()
-
-    def _sync_manufacturing(self):
-        self.ensure_one()
-        self._sync_single_model("boms")
-        for sync_type in self.MANUFACTURING_ENDPOINTS:
-            self._sync_single_model(sync_type)
-        self.last_manufacturing_sync = fields.Datetime.now()
-
-    def _sync_single_model(self, sync_type):
-        self.ensure_one()
-        if sync_type == "inventory_snapshot":
-            self._sync_inventory_snapshot()
-        elif sync_type == "boms":
-            self._sync_boms()
-        elif sync_type == "products":
-            self._sync_products()
-        else:
-            endpoint = self.SINGLE_SYNC_ENDPOINTS.get(sync_type)
-            if not endpoint:
-                raise UserError(_("No Splendid endpoint configured for %s") % sync_type)
-            self._sync_endpoint(sync_type, endpoint)
-        last_field = self.SINGLE_SYNC_LAST_FIELDS.get(sync_type)
-        if last_field and last_field in self._fields:
-            self.write({last_field: fields.Datetime.now()})
         self.env.cr.commit()
-        return True
 
-    def _fetch_detail_payload(self, endpoint, payload):
-        """List endpoints may return summary rows without line/details.
-        Fetch /{endpoint}/{id} so transaction accounts from detail lines are available.
-        """
-        if not isinstance(payload, dict):
-            return payload
-        external_id = self._external_id(payload)
-        if not external_id:
-            return payload
-        try:
-            detail = self._api_request("GET", "%s/%s" % (endpoint.rstrip("/"), external_id))
-        except Exception as exc:  # pylint: disable=broad-except
-            _logger.debug("Could not fetch detail payload for %s/%s: %s", endpoint, external_id, exc)
-            return payload
-        rows = self._extract_list(detail)
-        if rows:
-            return rows[0]
-        if isinstance(detail, dict) and detail:
-            return detail
-        return payload
-
-    def _sync_endpoint(self, sync_type, endpoint):
+    def _sync_master_model(self, key):
         self.ensure_one()
-        rows = self._fetch_collection(endpoint)
-        importer = getattr(self, "_import_%s" % sync_type, None)
+        endpoint = self.MASTER_ENDPOINTS.get(key)
+        if not endpoint:
+            raise UserError(_("No Splendid endpoint configured for %s") % key)
+        importer = getattr(self, "_import_%s" % key, None)
         if not importer:
-            raise UserError(_("No importer defined for %s") % sync_type)
+            raise UserError(_("No importer defined for %s") % key)
+        params = self._params_for_master(key)
+        rows = self._fetch_collection(endpoint, params=params, use_paging=True)
+        imported = 0
+        failed = 0
         for payload in rows:
             external_id = self._external_id(payload)
             try:
-                full_payload = self._fetch_detail_payload(endpoint, payload)
-                record = importer(full_payload)
-                self._log(sync_type, "success", "Imported", full_payload, external_id, record)
+                record = importer(payload)
+                imported += 1
+                self._log(key, "success", "Imported/Updated", payload, external_id, record)
             except Exception as exc:  # pylint: disable=broad-except
-                _logger.exception("Failed to import Splendid %s/%s", sync_type, external_id)
-                self._log(sync_type, "error", str(exc), payload, external_id)
+                failed += 1
+                _logger.exception("Failed to import Splendid %s/%s", key, external_id)
+                self._log(key, "error", str(exc), payload, external_id)
+        self._set_count(key, len(rows), imported, failed)
+        last_field = "last_%s_sync" % key
+        if last_field in self._fields:
+            self.write({last_field: fields.Datetime.now()})
+        if key == "products":
+            self.last_get_products_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _params_for_master(self, key):
+        base = {"orderBy": "Id", "ascending": "true"}
+        if key in ("products",):
+            base["showOpening"] = "false"
+        return base
 
     def _import_chart_accounts(self, payload):
         external_id = self._external_id(payload)
-        existing = self._mapped_record("account", external_id, "account.account")
-        code = self._get_payload_account_code(payload, external_id)
+        raw_code = self._find_value(payload, "code", "number", "accountCode", "accountNumber", "accountNo")
+        code = self._clean_account_code(raw_code or external_id)
+        if not code:
+            raise UserError(_("Missing account code for Splendid account %s") % external_id)
         name = self._find_value(payload, "name", "displayName", "description") or code
         vals = {
             "code": code,
@@ -820,35 +537,24 @@ class SplendidAccountConnection(models.Model):
             vals["company_id"] = self.company_id.id
         elif "company_ids" in account_fields:
             vals["company_ids"] = [(4, self.company_id.id)]
-        if existing:
-            existing.write(vals)
-            account = existing
+        account = self._mapped_record("account", external_id, "account.account")
+        if not account:
+            account = self._search_account_by_external_or_code(external_id, code)
+        if account:
+            account.write(vals)
         else:
-            search_domain = [("code", "=", code)]
-            account_fields = self.env["account.account"]._fields
-            if "company_id" in account_fields:
-                search_domain.append(("company_id", "=", self.company_id.id))
-            elif "company_ids" in account_fields:
-                search_domain.append(("company_ids", "in", self.company_id.id))
-            account = self.env["account.account"].with_company(self.company_id).sudo().search(search_domain, limit=1)
-            if account:
-                account.write(vals)
-            else:
-                account = self.env["account.account"].with_company(self.company_id).sudo().create(vals)
+            account = self.env["account.account"].with_company(self.company_id).sudo().create(vals)
         self._set_mapping("account", external_id, account, payload, name)
         return account
 
     def _map_account_type(self, payload):
-        text = " ".join(
-            str(x or "")
-            for x in (
-                self._find_value(payload, "accountType", "accountTypeId"),
-                self._find_value(payload, "accountClass"),
-                self._find_value(payload, "accountGroup"),
-                self._find_value(payload, "name"),
-                self._find_value(payload, "code"),
-            )
-        ).lower()
+        text = " ".join(str(x or "") for x in (
+            self._find_value(payload, "accountType", "accountTypeId"),
+            self._find_value(payload, "accountClass"),
+            self._find_value(payload, "accountGroup"),
+            self._find_value(payload, "name"),
+            self._find_value(payload, "code"),
+        )).lower()
         if "receivable" in text or "customer" in text:
             return "asset_receivable"
         if "payable" in text or "vendor" in text or "supplier" in text:
@@ -880,11 +586,11 @@ class SplendidAccountConnection(models.Model):
     def _import_partner(self, payload, partner_type):
         external_id = self._external_id(payload)
         model_key = "customer" if partner_type == "customer" else "vendor"
-        existing = self._mapped_record(model_key, external_id, "res.partner")
+        partner = self._mapped_record(model_key, external_id, "res.partner")
         name = self._find_value(payload, "name", "displayName", "printName", "contactPerson") or _("Splendid Contact %s") % external_id
         vals = {
             "name": name,
-            "street": self._find_value(payload, "address1"),
+            "street": self._find_value(payload, "address1", "address"),
             "street2": self._find_value(payload, "address2"),
             "city": self._find_value(payload, "city"),
             "zip": self._find_value(payload, "zip", "postalCode"),
@@ -899,17 +605,16 @@ class SplendidAccountConnection(models.Model):
             vals["company_id"] = self.company_id.id
         if partner_type == "customer":
             vals.update({"customer_rank": 1, "splendid_customer_id": external_id})
-            if self.default_receivable_account_id:
-                vals["property_account_receivable_id"] = self.default_receivable_account_id.id
+            account = self._resolve_account(self._find_value(payload, "accountId")) or self.default_receivable_account_id
+            if account and account.account_type == "asset_receivable":
+                vals["property_account_receivable_id"] = account.id
         else:
             vals.update({"supplier_rank": 1, "splendid_vendor_id": external_id})
-            if self.default_payable_account_id:
-                vals["property_account_payable_id"] = self.default_payable_account_id.id
+            account = self._resolve_account(self._find_value(payload, "accountId")) or self.default_payable_account_id
+            if account and account.account_type == "liability_payable":
+                vals["property_account_payable_id"] = account.id
         vals = {k: v for k, v in vals.items() if v not in (False, None)}
-        if existing:
-            existing.write(vals)
-            partner = existing
-        else:
+        if not partner:
             domain = []
             if vals.get("email"):
                 domain = [("email", "=", vals["email"])]
@@ -918,65 +623,12 @@ class SplendidAccountConnection(models.Model):
             if domain and "company_id" in self.env["res.partner"]._fields:
                 domain = ["&"] + domain + ["|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)]
             partner = self.env["res.partner"].with_company(self.company_id).sudo().search(domain, limit=1) if domain else self.env["res.partner"].with_company(self.company_id)
-            if partner:
-                partner.write(vals)
-            else:
-                partner = self.env["res.partner"].with_company(self.company_id).sudo().create(vals)
+        if partner:
+            partner.write(vals)
+        else:
+            partner = self.env["res.partner"].with_company(self.company_id).sudo().create(vals)
         self._set_mapping(model_key, external_id, partner, payload, name)
         return partner
-
-    def _safe_float(self, value, default=0.0):
-        if value in (False, None, ""):
-            return default
-        if isinstance(value, (int, float)):
-            return float(value)
-        text = str(value).strip()
-        if not text:
-            return default
-        # Splendid may send values like "1,200.50" or "PKR 1,200.50".
-        text = re.sub(r"[^0-9.\-]", "", text)
-        if text in ("", ".", "-", "-."):
-            return default
-        try:
-            return float(text)
-        except ValueError:
-            return default
-
-    def _safe_bool(self, value, default=False):
-        if value in (False, None, ""):
-            return default
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        text = str(value).strip().lower()
-        if text in ("true", "1", "yes", "y", "active", "sale", "purchase"):
-            return True
-        if text in ("false", "0", "no", "n", "inactive"):
-            return False
-        return default
-
-    def _clean_product_code(self, value, fallback=False):
-        code = str(value or fallback or "").strip()
-        if not code:
-            return False
-        # default_code can hold most chars, but keep it short and searchable.
-        code = re.sub(r"\s+", " ", code)
-        return code[:100]
-
-    def _safe_barcode(self, value, product=False):
-        barcode = str(value or "").strip()
-        if not barcode:
-            return False
-        # Splendid schema limits barcode to 24 chars. Odoo barcode should be unique.
-        barcode = barcode[:64]
-        Product = self.env["product.template"].with_company(self.company_id).sudo()
-        domain = [("barcode", "=", barcode)]
-        if product:
-            domain.append(("id", "!=", product.id))
-        if Product.search(domain, limit=1):
-            return False
-        return barcode
 
     def _product_external_id(self, payload):
         value = self._find_value(payload, "id", "Id", "productId", "ProductId", "productID", "externalId", "sourceId")
@@ -984,412 +636,52 @@ class SplendidAccountConnection(models.Model):
             value = self._find_value(payload, "sku", "code", "number", "barcode", "name")
         return str(value or "")
 
-    def _fetch_product_detail(self, payload):
-        external_id = self._product_external_id(payload)
-        if not external_id:
-            return payload
-        # Splendid has both /Products/{id} and /Products/{id}/details. Try both.
-        for path in ("/Products/%s" % external_id, "/Products/%s/details" % external_id):
-            try:
-                detail = self._api_request("GET", path)
-            except Exception as exc:  # pylint: disable=broad-except
-                _logger.debug("Could not fetch product detail %s: %s", path, exc)
-                continue
-            rows = self._extract_list(detail)
-            if rows:
-                merged = dict(payload)
-                merged.update(rows[0])
-                return merged
-            if isinstance(detail, dict) and detail:
-                merged = dict(payload)
-                merged.update(detail)
-                return merged
-        return payload
-
-    def _sync_products(self):
-        """Dedicated product sync.
-
-        Product data can be returned by multiple Splendid endpoints depending on
-        product type/use-case. A generic /Products sync may miss sale/purchase/
-        inventory defaults or fail on summaries without complete fields.
-        """
-        self.ensure_one()
-        endpoints = [
-            ("/Products", {"showOpening": True}),
-            ("/Products/ForSale", {"showOpening": True, "showInActive": True, "hideBaseVariant": False}),
-            ("/Products/ForPurchase", {"showOpening": True, "showInActive": True, "hideBaseVariant": False}),
-            ("/Products/ForInventory/Default", {"hideBaseVariant": False}),
-        ]
-        products_by_key = {}
-        for endpoint, params in endpoints:
-            try:
-                use_paging = endpoint == "/Products"
-                rows = self._fetch_collection(endpoint, params=params, use_paging=use_paging)
-            except Exception as exc:  # pylint: disable=broad-except
-                _logger.warning("Splendid product endpoint failed %s: %s", endpoint, exc)
-                self._log("products", "error", _("Product endpoint %s failed: %s") % (endpoint, exc))
-                continue
-            for row in rows:
-                if not isinstance(row, dict):
-                    continue
-                key = self._product_external_id(row) or self._clean_product_code(self._find_value(row, "sku", "code", "number", "name"))
-                if not key:
-                    continue
-                if key in products_by_key:
-                    products_by_key[key].update(row)
-                else:
-                    products_by_key[key] = dict(row)
-
-        if not products_by_key:
-            self._log("products", "error", _("No products received from Splendid API. Check tenant/branch or product endpoint permissions."))
-            return False
-
-        imported = 0
-        failed = 0
-        for key, payload in products_by_key.items():
-            try:
-                full_payload = self._fetch_product_detail(payload)
-                record = self._import_products(full_payload)
-                imported += 1
-                self._log("products", "success", "Imported", full_payload, self._product_external_id(full_payload) or key, record)
-            except Exception as exc:  # pylint: disable=broad-except
-                failed += 1
-                _logger.exception("Failed to import Splendid product %s", key)
-                self._log("products", "error", str(exc), payload, key)
-        if imported == 0 and failed:
-            raise UserError(_("No Splendid products were imported. Please open Splendid Sync Logs for the detailed product errors."))
-        return True
-
     def _import_products(self, payload):
         external_id = self._product_external_id(payload)
-        existing = self._mapped_record("product", external_id, "product.template")
+        product = self._mapped_record("product", external_id, "product.template")
         name = self._find_value(payload, "name", "displayName", "shortName", "sku", "code") or _("Splendid Product %s") % external_id
         sku = self._clean_product_code(self._find_value(payload, "sku", "code", "number"), fallback=external_id)
         if not sku:
             sku = self._clean_product_code(name, fallback=external_id)
-
         vals = {
             "name": str(name)[:1000],
             "default_code": sku,
             "list_price": self._safe_float(self._find_value(payload, "salePrice", "maximumRetailPrice"), 0.0),
             "standard_price": self._safe_float(self._find_value(payload, "purchasePrice", "averageCost"), 0.0),
-            "sale_ok": self._safe_bool(self._find_value(payload, "isForSale"), True),
-            "purchase_ok": self._safe_bool(self._find_value(payload, "isForPurchase"), True),
             "splendid_product_id": external_id,
             "splendid_is_imported": True,
         }
+        if "sale_ok" in self.env["product.template"]._fields:
+            vals["sale_ok"] = self._safe_bool(self._find_value(payload, "isForSale"), True)
+        if "purchase_ok" in self.env["product.template"]._fields:
+            vals["purchase_ok"] = self._safe_bool(self._find_value(payload, "isForPurchase"), True)
         if "company_id" in self.env["product.template"]._fields:
             vals["company_id"] = self.company_id.id
-
         vals.update(self._product_type_vals(payload))
-
-        income_account = self._resolve_named_account(payload, "salesAccountId", "salesAccount", fallback_kind=False, required=False)
-        expense_account = self._resolve_named_account(payload, "expenseAccountId", "expenseAccount", fallback_kind=False, required=False)
-        inventory_account = self._resolve_named_account(payload, "inventoryAccountId", "inventoryAccount", fallback_kind=False, required=False)
-        if income_account and "property_account_income_id" in self.env["product.template"]._fields:
-            vals["property_account_income_id"] = income_account.id
-        if expense_account and "property_account_expense_id" in self.env["product.template"]._fields:
-            vals["property_account_expense_id"] = expense_account.id
-        # Odoo stock valuation accounts are normally category-level. If the
-        # product template has an inventory/property field in the installed
-        # version, set it; otherwise leave valuation to the category.
-        if inventory_account and "property_stock_valuation_account_id" in self.env["product.template"]._fields:
-            vals["property_stock_valuation_account_id"] = inventory_account.id
-
+        barcode = self._safe_barcode(self._find_value(payload, "barcode"), product=product)
+        if barcode and "barcode" in self.env["product.template"]._fields:
+            vals["barcode"] = barcode
         description = self._find_value(payload, "description", "shortDescription", "catalogContent")
         if description:
             vals["description_sale"] = description
             vals["description_purchase"] = description
-
-        vals = {k: v for k, v in vals.items() if v is not None}
-        Product = self.env["product.template"].with_company(self.company_id).sudo()
-        if existing:
-            product = existing
-            barcode = self._safe_barcode(self._find_value(payload, "barcode"), product=product)
-            if barcode and "barcode" in product._fields:
-                vals["barcode"] = barcode
+        income_account = self._resolve_account(self._find_value(payload, "salesAccountId"))
+        expense_account = self._resolve_account(self._find_value(payload, "expenseAccountId"))
+        if income_account and "property_account_income_id" in self.env["product.template"]._fields:
+            vals["property_account_income_id"] = income_account.id
+        if expense_account and "property_account_expense_id" in self.env["product.template"]._fields:
+            vals["property_account_expense_id"] = expense_account.id
+        if not product:
+            domain = [("default_code", "=", sku)]
+            if "company_id" in self.env["product.template"]._fields:
+                domain = ["&"] + domain + ["|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)]
+            product = self.env["product.template"].with_company(self.company_id).sudo().search(domain, limit=1)
+        if product:
             product.write(vals)
         else:
-            product_domain = [("default_code", "=", sku)]
-            if "company_id" in self.env["product.template"]._fields:
-                product_domain = ["&"] + product_domain + ["|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)]
-            product = Product.search(product_domain, limit=1)
-            barcode = self._safe_barcode(self._find_value(payload, "barcode"), product=product if product else False)
-            if barcode:
-                vals["barcode"] = barcode
-            if product:
-                product.write(vals)
-            else:
-                product = Product.create(vals)
+            product = self.env["product.template"].with_company(self.company_id).sudo().create(vals)
         self._set_mapping("product", external_id, product, payload, name)
         return product
-
-    def _import_warehouses(self, payload):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record("warehouse", external_id, "stock.warehouse")
-        name = self._find_value(payload, "name", "displayName", "code") or _("Splendid Warehouse %s") % external_id
-        code_source = str(self._find_value(payload, "code", "number") or name or external_id).upper()
-        code = "".join(ch for ch in code_source if ch.isalnum())[:5] or ("SP%s" % external_id)[-5:]
-        Warehouse = self.env["stock.warehouse"].with_company(self.company_id).sudo()
-        if not existing:
-            existing = Warehouse.search([("company_id", "=", self.company_id.id), "|", ("name", "=", name), ("code", "=", code)], limit=1)
-        if not existing:
-            original_code = code
-            seq = 1
-            while Warehouse.search([("company_id", "=", self.company_id.id), ("code", "=", code)], limit=1):
-                code = (original_code[:3] + str(seq))[:5]
-                seq += 1
-            vals = {"name": name, "code": code, "company_id": self.company_id.id}
-            existing = Warehouse.create(vals)
-        else:
-            existing.write({"name": name})
-        if "splendid_warehouse_id" in existing._fields:
-            existing.write({"splendid_warehouse_id": external_id, "splendid_is_imported": True})
-        self._set_mapping("warehouse", external_id, existing, payload, name)
-        return existing
-
-    def _resolve_warehouse(self, payload=None, warehouse_id=False, nested_key="warehouse"):
-        self.ensure_one()
-        payload = payload or {}
-        external_id = warehouse_id or self._find_value(payload, "warehouseId", "warehouseID")
-        warehouse = self._mapped_record("warehouse", external_id, "stock.warehouse") if external_id else self.env["stock.warehouse"]
-        if warehouse:
-            return warehouse
-        nested = self._nested(payload, nested_key)
-        if nested:
-            return self._import_warehouses(nested)
-        return self._default_warehouse()
-
-    def _default_warehouse(self):
-        warehouse = self.env["stock.warehouse"].with_company(self.company_id).sudo().search([("company_id", "=", self.company_id.id)], limit=1)
-        if not warehouse:
-            raise UserError(_("Please create/configure at least one Odoo warehouse for company %s.") % self.company_id.display_name)
-        return warehouse
-
-    def _warehouse_stock_location(self, warehouse=False):
-        warehouse = warehouse or self._default_warehouse()
-        if warehouse and warehouse.lot_stock_id:
-            return warehouse.lot_stock_id
-        location = self.env["stock.location"].sudo().search([("usage", "=", "internal"), ("company_id", "in", [False, self.company_id.id])], limit=1)
-        if not location:
-            raise UserError(_("No internal stock location found for company %s.") % self.company_id.display_name)
-        return location
-
-    def _inventory_location(self):
-        location = self.env.ref("stock.stock_location_inventory", raise_if_not_found=False)
-        if not location:
-            location = self.env["stock.location"].sudo().search([("usage", "=", "inventory")], limit=1)
-        if not location:
-            raise UserError(_("No inventory adjustment location found."))
-        return location
-
-    def _default_internal_picking_type(self, warehouse=False):
-        warehouse = warehouse or self._default_warehouse()
-        if warehouse and warehouse.int_type_id:
-            return warehouse.int_type_id
-        picking_type = self.env["stock.picking.type"].with_company(self.company_id).sudo().search([
-            ("code", "=", "internal"), ("company_id", "=", self.company_id.id)
-        ], limit=1)
-        if not picking_type:
-            raise UserError(_("No internal picking type found for company %s.") % self.company_id.display_name)
-        return picking_type
-
-    def _stockable_product_variant(self, product_tmpl):
-        if not product_tmpl:
-            return self.env["product.product"]
-        vals = {}
-        if "detailed_type" in product_tmpl._fields and product_tmpl.detailed_type != "consu":
-            vals["detailed_type"] = "consu"
-        elif "type" in product_tmpl._fields and product_tmpl.type != "consu":
-            vals["type"] = "consu"
-        if "is_storable" in product_tmpl._fields and not product_tmpl.is_storable:
-            vals["is_storable"] = True
-        if vals:
-            product_tmpl.sudo().write(vals)
-        return product_tmpl.product_variant_id
-
-    def _sync_inventory_snapshot(self):
-        rows = self._fetch_collection("/Products/Inventory", use_paging=False)
-        for payload in rows:
-            external_id = self._external_id(payload)
-            try:
-                count = 0
-                for line in self._inventory_snapshot_lines(payload):
-                    product_tmpl = line.get("product_tmpl")
-                    if not product_tmpl:
-                        continue
-                    product = self._stockable_product_variant(product_tmpl)
-                    warehouse = line.get("warehouse") or self._default_warehouse()
-                    location = self._warehouse_stock_location(warehouse)
-                    target_qty = float(line.get("quantity") or 0.0)
-                    Quant = self.env["stock.quant"].with_company(self.company_id).sudo()
-                    current_qty = Quant._get_available_quantity(product, location)
-                    diff = target_qty - current_qty
-                    if abs(diff) >= 0.00001:
-                        Quant._update_available_quantity(product, location, diff)
-                    count += 1
-                self._log("inventory_snapshot", "success", _("Applied %s inventory snapshot line(s).") % count, payload, external_id)
-            except Exception as exc:  # pylint: disable=broad-except
-                _logger.exception("Failed to apply inventory snapshot %s", external_id)
-                self._log("inventory_snapshot", "error", str(exc), payload, external_id)
-
-    def _inventory_snapshot_lines(self, payload):
-        containers = []
-        for key in ("inventoryDetails", "warehouseStock", "warehouseStocks", "productStockLevels", "stockLevels", "stocks", "inventory", "items", "details"):
-            value = self._find_value(payload, key)
-            if isinstance(value, list):
-                containers.extend(value)
-        if not containers:
-            containers = [payload]
-        result = []
-        for item in containers:
-            product_tmpl = self._resolve_product_from_line(item) or self._resolve_product_from_line(payload)
-            warehouse = self._resolve_warehouse(item)
-            quantity = self._find_value(
-                item,
-                "availableQuantity", "availableQty", "quantityOnHand", "onHandQuantity", "currentStock",
-                "stockQty", "balanceQty", "closingQuantity", "closingQty", "quantity", "stock",
-                default=0.0,
-            )
-            result.append({"product_tmpl": product_tmpl, "warehouse": warehouse, "quantity": quantity})
-        return result
-
-    def _import_inventory_adjustments(self, payload):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record("inventory_adjustment", external_id, "stock.picking")
-        if existing:
-            return existing
-        details = self._find_value(payload, "inventoryAdjustmentDetails", "details") or []
-        if not isinstance(details, list):
-            details = []
-        negative = self._is_negative_adjustment(payload)
-        warehouse = self._resolve_warehouse(payload)
-        internal_location = self._warehouse_stock_location(warehouse)
-        inventory_location = self._inventory_location()
-        source_location = internal_location if negative else inventory_location
-        dest_location = inventory_location if negative else internal_location
-        move_cmds = []
-        for line in details:
-            product_tmpl = self._resolve_product_from_line(line)
-            if not product_tmpl:
-                continue
-            product = self._stockable_product_variant(product_tmpl)
-            qty = float(self._find_value(line, "quantity", default=0.0) or 0.0)
-            if qty <= 0:
-                continue
-            move_cmds.append((0, 0, {
-                "name": self._find_value(line, "description") or product.display_name,
-                "product_id": product.id,
-                "product_uom_qty": qty,
-                "product_uom": product.uom_id.id,
-                "location_id": source_location.id,
-                "location_dest_id": dest_location.id,
-                "company_id": self.company_id.id,
-            }))
-        if not move_cmds:
-            raise UserError(_("No inventory adjustment lines found for Splendid adjustment %s.") % external_id)
-        picking = self.env["stock.picking"].with_company(self.company_id).sudo().create({
-            "picking_type_id": self._default_internal_picking_type(warehouse).id,
-            "location_id": source_location.id,
-            "location_dest_id": dest_location.id,
-            "origin": self._find_value(payload, "number", "reference") or external_id,
-            "scheduled_date": self._parse_datetime(self._find_value(payload, "date")),
-            "company_id": self.company_id.id,
-            "move_ids": move_cmds,
-            "splendid_external_id": external_id,
-            "splendid_source_model": "inventory_adjustment",
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
-        })
-        self._set_mapping("inventory_adjustment", external_id, picking, payload, picking.name)
-        self._confirm_or_validate_picking(picking)
-        return picking
-
-    def _is_negative_adjustment(self, payload):
-        text = " ".join(str(x or "") for x in (
-            self._find_value(payload, "adjustmentType", "type", "status"),
-            self._find_value(self._nested(payload, "adjustmentType"), "name", "code"),
-            self._find_value(payload, "number", "reference", "comments", "narration"),
-        )).lower()
-        return any(word in text for word in ("decrease", "debit", "issue", "loss", "short", "out", "reduce", "negative", "damage"))
-
-    def _import_stock_movements(self, payload):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record("stock_movement", external_id, "stock.picking")
-        if existing:
-            return existing
-        from_warehouse = self._resolve_warehouse(payload, warehouse_id=self._find_value(payload, "fromId"), nested_key="from")
-        to_warehouse = self._resolve_warehouse(payload, warehouse_id=self._find_value(payload, "toId"), nested_key="to")
-        source_location = self._warehouse_stock_location(from_warehouse)
-        dest_location = self._warehouse_stock_location(to_warehouse)
-        details = self._find_value(payload, "stockMovementDetails", "details") or []
-        if not isinstance(details, list):
-            details = []
-        move_cmds = []
-        for line in details:
-            product_tmpl = self._resolve_product_from_line(line)
-            if not product_tmpl:
-                continue
-            product = self._stockable_product_variant(product_tmpl)
-            qty = float(self._find_value(line, "quantity", default=0.0) or 0.0)
-            if qty <= 0:
-                continue
-            move_cmds.append((0, 0, {
-                "name": self._find_value(line, "description") or product.display_name,
-                "product_id": product.id,
-                "product_uom_qty": qty,
-                "product_uom": product.uom_id.id,
-                "location_id": source_location.id,
-                "location_dest_id": dest_location.id,
-                "company_id": self.company_id.id,
-            }))
-        if not move_cmds:
-            raise UserError(_("No stock movement lines found for Splendid movement %s.") % external_id)
-        picking = self.env["stock.picking"].with_company(self.company_id).sudo().create({
-            "picking_type_id": self._default_internal_picking_type(from_warehouse).id,
-            "location_id": source_location.id,
-            "location_dest_id": dest_location.id,
-            "origin": self._find_value(payload, "number", "reference") or external_id,
-            "scheduled_date": self._parse_datetime(self._find_value(payload, "date")),
-            "company_id": self.company_id.id,
-            "move_ids": move_cmds,
-            "splendid_external_id": external_id,
-            "splendid_source_model": "stock_movement",
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
-        })
-        self._set_mapping("stock_movement", external_id, picking, payload, picking.name)
-        self._confirm_or_validate_picking(picking)
-        return picking
-
-    def _confirm_or_validate_picking(self, picking):
-        if not picking:
-            return False
-        if picking.state == "draft":
-            picking.action_confirm()
-        if self.auto_validate_stock_pickings and picking.state not in ("done", "cancel"):
-            picking.action_assign()
-            for move in picking.move_ids:
-                qty = move.product_uom_qty
-                if "quantity" in move._fields:
-                    move.quantity = qty
-                elif "quantity_done" in move._fields:
-                    move.quantity_done = qty
-            picking.button_validate()
-        return True
-
-    def _parse_datetime(self, value):
-        if not value:
-            return fields.Datetime.now()
-        if isinstance(value, datetime):
-            return value
-        if isinstance(value, str):
-            value = value.replace("Z", "+00:00")
-            try:
-                return datetime.fromisoformat(value).replace(tzinfo=None)
-            except ValueError:
-                return fields.Datetime.now()
-        return value
 
     def _selection_has_value(self, model, field_name, value):
         field = model._fields.get(field_name)
@@ -1403,149 +695,466 @@ class SplendidAccountConnection(models.Model):
         return value in [item[0] for item in (selection or [])]
 
     def _product_type_vals(self, payload):
-        track_inventory = bool(self._find_value(payload, "trackInventory", default=False))
         product_model = self.env["product.template"]
         vals = {}
-
-        type_text = " ".join(
-            str(x or "")
-            for x in (
-                self._find_value(payload, "type"),
-                self._find_value(payload, "productType"),
-                self._find_value(payload, "itemType"),
-                self._find_value(payload, "category"),
-            )
-        ).lower()
-
-        is_service = "service" in type_text
-        odoo_type = "service" if is_service else "consu"
-
-        # Odoo 18/19 product.template.type uses consu/service/combo.
-        # Do not send "product" here; it causes:
-        # Wrong value for product.template.type: 'product'
+        text = " ".join(str(x or "") for x in (
+            self._find_value(payload, "type"),
+            self._find_value(payload, "productType"),
+            self._find_value(payload, "itemType"),
+            self._find_value(payload, "category"),
+            self._find_value(payload, "productCategoryName"),
+        )).lower()
+        is_service = "service" in text
+        is_combo = any(word in text for word in ("combo", "bundle", "kit", "assembly")) or self._safe_bool(self._find_value(payload, "hasProductBreakup"), False)
+        track_inventory = self._safe_bool(self._find_value(payload, "trackInventory"), False)
+        odoo_type = "service" if is_service else ("combo" if is_combo else "consu")
         if "type" in product_model._fields:
             if self._selection_has_value(product_model, "type", odoo_type):
                 vals["type"] = odoo_type
-            elif self._selection_has_value(product_model, "type", "product") and track_inventory and not is_service:
-                vals["type"] = "product"
             elif self._selection_has_value(product_model, "type", "consu"):
                 vals["type"] = "consu"
-
         if "detailed_type" in product_model._fields:
             if self._selection_has_value(product_model, "detailed_type", odoo_type):
                 vals["detailed_type"] = odoo_type
-            elif self._selection_has_value(product_model, "detailed_type", "product") and track_inventory and not is_service:
-                vals["detailed_type"] = "product"
             elif self._selection_has_value(product_model, "detailed_type", "consu"):
                 vals["detailed_type"] = "consu"
-
         if "is_storable" in product_model._fields:
             vals["is_storable"] = bool(track_inventory and not is_service)
         return vals
 
-    def _import_sales(self, payload):
-        return self._import_invoice(payload, "sale_invoice", "out_invoice", "customer", "saleInvoiceDetails")
+    def _safe_barcode(self, value, product=False):
+        barcode = str(value or "").strip()
+        if not barcode:
+            return False
+        barcode = barcode[:64]
+        Product = self.env["product.template"].with_company(self.company_id).sudo()
+        domain = [("barcode", "=", barcode)]
+        if product:
+            domain.append(("id", "!=", product.id))
+        if Product.search(domain, limit=1):
+            return False
+        return barcode
 
-    def _import_sale_returns(self, payload):
-        return self._import_invoice(payload, "sale_return", "out_refund", "customer", "saleReturnDetails")
-
-    def _import_purchases(self, payload):
-        return self._import_invoice(payload, "purchase_invoice", "in_invoice", "vendor", "purchaseInvoiceDetails")
-
-    def _import_purchase_returns(self, payload):
-        return self._import_invoice(payload, "purchase_return", "in_refund", "vendor", "purchaseReturnDetails")
-
-    def _import_invoice(self, payload, external_model, move_type, partner_kind, detail_key):
+    def _import_warehouses(self, payload):
         external_id = self._external_id(payload)
-        existing = self._mapped_record(external_model, external_id, "account.move")
-        partner = self._resolve_partner_from_payload(payload, partner_kind)
-        self._apply_partner_control_account(partner, payload, move_type)
-        journal = self._default_journal("sale" if move_type.startswith("out_") else "purchase")
-        line_cmds = self._invoice_line_cmds(payload, move_type, detail_key)
-        if not line_cmds:
-            amount = float(self._find_value(payload, "netAmount", "grossAmount", "totalAmount", default=0.0) or 0.0)
-            account = self._resolve_splendid_account(payload, fallback_kind=("income" if move_type.startswith("out_") else "expense"), required=False)
-            line_cmds = [(0, 0, {"name": self._find_value(payload, "narration", "comments", "number") or "Splendid line", "quantity": 1.0, "price_unit": amount, "account_id": account.id})]
-        vals = {
-            "move_type": move_type,
-            "partner_id": partner.id if partner else False,
-            "invoice_date": self._parse_date(self._find_value(payload, "date")),
-            "invoice_date_due": self._parse_date(self._find_value(payload, "dueDate")) if self._find_value(payload, "dueDate") else False,
-            "journal_id": journal.id,
-            "ref": self._find_value(payload, "reference", "number", "paymentReference") or external_id,
-            "invoice_line_ids": line_cmds,
-            "splendid_external_id": external_id,
-            "splendid_source_model": external_model,
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
-            "company_id": self.company_id.id,
-        }
-        if existing:
-            move = existing
-            if self.update_existing_draft_records and move.state == "draft":
-                write_vals = dict(vals)
-                write_vals.pop("move_type", None)
-                write_vals.pop("company_id", None)
-                write_vals["invoice_line_ids"] = [(5, 0, 0)] + line_cmds
-                move.with_context(check_move_validity=False).write(write_vals)
+        warehouse = self._mapped_record("warehouse", external_id, "stock.warehouse")
+        name = self._find_value(payload, "name", "displayName", "code") or _("Splendid Warehouse %s") % external_id
+        code_source = str(self._find_value(payload, "code", "number") or name or external_id).upper()
+        code = "".join(ch for ch in code_source if ch.isalnum())[:5] or ("SP%s" % external_id)[-5:]
+        Warehouse = self.env["stock.warehouse"].with_company(self.company_id).sudo()
+        if not warehouse:
+            warehouse = Warehouse.search([("company_id", "=", self.company_id.id), "|", ("name", "=", name), ("code", "=", code)], limit=1)
+        if not warehouse:
+            original_code = code
+            seq = 1
+            while Warehouse.search([("company_id", "=", self.company_id.id), ("code", "=", code)], limit=1):
+                code = (original_code[:3] + str(seq))[:5]
+                seq += 1
+            warehouse = Warehouse.create({"name": name, "code": code, "company_id": self.company_id.id})
         else:
-            move = self.env["account.move"].with_company(self.company_id).sudo().create(vals)
-        self._set_mapping(external_model, external_id, move, payload, vals["ref"])
-        if self.auto_post_moves and not self.import_as_draft and move.state == "draft":
-            move.action_post()
-        return move
+            warehouse.write({"name": name})
+        if "splendid_warehouse_id" in warehouse._fields:
+            warehouse.write({"splendid_warehouse_id": external_id, "splendid_is_imported": True})
+        self._set_mapping("warehouse", external_id, warehouse, payload, name)
+        return warehouse
 
-    def _invoice_line_cmds(self, payload, move_type, detail_key):
-        details = self._find_value(payload, detail_key) or []
-        if not isinstance(details, list):
-            details = []
-        cmds = []
-        for line in details:
-            product = self._resolve_product_from_line(line)
-            account = self._resolve_line_account(line, product, move_type)
-            qty = float(self._find_value(line, "quantity", default=1.0) or 1.0)
-            price = self._find_value(line, "price", "salePrice", "purchasePrice")
-            if price in (False, None, ""):
-                net = float(self._find_value(line, "netAmount", "grossAmount", default=0.0) or 0.0)
-                price = net / qty if qty else net
+    def _import_bank_accounts(self, payload):
+        external_id = self._external_id(payload)
+        Journal = self.env["account.journal"].with_company(self.company_id).sudo()
+        journal = Journal.search([("company_id", "=", self.company_id.id), ("splendid_bank_account_id", "=", external_id)], limit=1)
+        bank_name = self._find_value(payload, "bankName") or "Bank"
+        account_title = self._find_value(payload, "accountTitle") or bank_name
+        account_number = self._find_value(payload, "accountNumber")
+        display_name = "%s - %s" % (bank_name, account_title)
+        default_account = self._resolve_account(self._find_value(payload, "accountId"), self._find_value(payload, "code"))
+        if not journal and account_number:
+            journal = Journal.search([("company_id", "=", self.company_id.id), ("bank_acc_number", "=", account_number)], limit=1)
+        vals = {
+            "name": display_name[:100],
+            "type": "bank",
+            "code": self._unique_journal_code(self._find_value(payload, "code") or bank_name, journal=journal),
+            "company_id": self.company_id.id,
+            "splendid_bank_account_id": external_id,
+            "splendid_bank_account_account_id": str(self._find_value(payload, "accountId") or ""),
+            "splendid_is_imported": True,
+        }
+        if default_account and "default_account_id" in Journal._fields:
+            vals["default_account_id"] = default_account.id
+        bank_account = self._get_or_create_partner_bank(payload)
+        if bank_account and "bank_account_id" in Journal._fields:
+            vals["bank_account_id"] = bank_account.id
+        if journal:
+            journal.write(vals)
+        else:
+            journal = Journal.create(vals)
+        self._set_mapping("bank_account", external_id, journal, payload, display_name)
+        return journal
+
+    def _unique_journal_code(self, source, journal=False):
+        base = "".join(ch for ch in str(source or "BNK").upper() if ch.isalnum())[:5] or "BNK"
+        Journal = self.env["account.journal"].with_company(self.company_id).sudo()
+        code = base
+        seq = 1
+        while Journal.search([("company_id", "=", self.company_id.id), ("code", "=", code), ("id", "!=", journal.id if journal else 0)], limit=1):
+            suffix = str(seq)
+            code = (base[: max(1, 5 - len(suffix))] + suffix)[:5]
+            seq += 1
+        return code
+
+    def _get_or_create_partner_bank(self, payload):
+        account_number = self._find_value(payload, "accountNumber")
+        if not account_number:
+            return self.env["res.partner.bank"]
+        Bank = self.env["res.bank"].sudo()
+        PartnerBank = self.env["res.partner.bank"].sudo()
+        bank_name = self._find_value(payload, "bankName")
+        bank = Bank.search([("name", "=", bank_name)], limit=1) if bank_name else Bank
+        if not bank and bank_name:
+            bank = Bank.create({"name": bank_name})
+        bank_account = PartnerBank.search([("acc_number", "=", account_number)], limit=1)
+        vals = {"acc_number": account_number, "partner_id": self._company_partner().id}
+        if bank:
+            vals["bank_id"] = bank.id
+        if "company_id" in PartnerBank._fields:
+            vals["company_id"] = self.company_id.id
+        if bank_account:
+            bank_account.write(vals)
+        else:
+            bank_account = PartnerBank.create(vals)
+        return bank_account
+
+    def _get_tax_country_id(self):
+            self.ensure_one()
+            country = self.company_id.account_fiscal_country_id or self.company_id.country_id
+            if not country:
+                raise UserError(_("Please set Country / Fiscal Country on company %s before syncing taxes.") % self.company_id.display_name)
+            return country.id
+
+
+    def _import_taxes(self, payload):
+        self.ensure_one()
+
+        external_id = self._external_id(payload)
+        name = self._find_value(payload, "name", "abbreviation") or _("Splendid Tax %s") % external_id
+        abbreviation = self._find_value(payload, "abbreviation")
+        rate = self._safe_float(self._find_value(payload, "rate"), 0.0)
+        active = self._safe_bool(self._find_value(payload, "isActive"), True)
+        tax_country_id = self._get_tax_country_id()
+
+        created_taxes = self.env["account.tax"].with_company(self.company_id).sudo()
+
+        tax_defs = []
+
+        if self._safe_bool(self._find_value(payload, "out"), False):
+            tax_defs.append({
+                "tax_use": "sale",
+                "name": "%s (Sale)" % name,
+                "account_id": self._find_value(payload, "accountOutId"),
+            })
+
+        if self._safe_bool(self._find_value(payload, "in"), False):
+            tax_defs.append({
+                "tax_use": "purchase",
+                "name": "%s (Purchase)" % name,
+                "account_id": self._find_value(payload, "accountInId"),
+            })
+
+        if not tax_defs:
+            tax_defs.append({
+                "tax_use": "none",
+                "name": name,
+                "account_id": False,
+            })
+
+        Tax = self.env["account.tax"].with_company(self.company_id).sudo()
+
+        for tax_def in tax_defs:
+            tax_use = tax_def["tax_use"]
+
+            domain = [
+                ("company_id", "=", self.company_id.id),
+                ("splendid_tax_id", "=", str(external_id)),
+                ("splendid_tax_use", "=", tax_use),
+            ]
+
+            tax = Tax.search(domain, limit=1)
+
             vals = {
-                "name": self._find_value(line, "description") or (product.display_name if product else "Splendid line"),
-                "quantity": qty,
-                "price_unit": float(price or 0.0),
-                "discount": float(self._find_value(line, "discountInPercent", default=0.0) or 0.0),
-                "account_id": account.id,
+                "name": tax_def["name"],
+                "amount": rate,
+                "amount_type": "percent",
+                "type_tax_use": tax_use,
+                "active": active,
+                "company_id": self.company_id.id,
+                "country_id": tax_country_id,
+                "splendid_tax_id": str(external_id),
+                "splendid_tax_use": tax_use,
+                "splendid_tax_direction": tax_use if tax_use in ("sale", "purchase") else False,
+                "splendid_is_imported": True,
             }
-            if product:
-                vals["product_id"] = product.product_variant_id.id
-            cmds.append((0, 0, vals))
-        return cmds
 
-    def _resolve_line_account(self, line, product_tmpl, move_type):
-        splendid_account = self._resolve_splendid_account(line, fallback_kind=False, required=True)
-        if splendid_account:
-            return splendid_account
-        if product_tmpl:
-            product = product_tmpl.product_variant_id
-            if move_type.startswith("out_"):
-                account = product.property_account_income_id or product.categ_id.property_account_income_categ_id
-                if account:
-                    return account
-            account = product.property_account_expense_id or product.categ_id.property_account_expense_categ_id
-            if account:
-                return account
-        return self._default_account("income" if move_type.startswith("out_") else "expense")
+            if tax:
+                tax.write(vals)
+            else:
+                tax = Tax.create(vals)
 
-    def _resolve_partner_from_payload(self, payload, kind):
-        key = "customerId" if kind == "customer" else "vendorId"
-        nested_key = "customer" if kind == "customer" else "vendor"
-        external_id = self._find_value(payload, key)
-        partner = self._mapped_record(kind, external_id, "res.partner") if external_id else self.env["res.partner"]
+            self._set_mapping(
+                "tax",
+                "%s_%s" % (external_id, tax_use),
+                tax,
+                payload,
+                tax_def["name"],
+            )
+
+            created_taxes |= tax
+
+        return created_taxes[:1]
+    def _upsert_tax(self, payload, direction):
+        external_id = self._external_id(payload)
+        Tax = self.env["account.tax"].with_company(self.company_id).sudo()
+        tax = Tax.search([
+            ("company_id", "=", self.company_id.id),
+            ("splendid_tax_id", "=", external_id),
+            ("splendid_tax_direction", "=", direction),
+        ], limit=1)
+        base_name = self._find_value(payload, "name", "abbreviation") or _("Splendid Tax %s") % external_id
+        suffix = "Sale" if direction == "sale" else "Purchase"
+        account_id = self._find_value(payload, "accountOutId" if direction == "sale" else "accountInId")
+        account = self._resolve_account(account_id)
+        vals = {
+            "name": "%s (%s)" % (base_name, suffix),
+            "amount": self._safe_float(self._find_value(payload, "rate"), 0.0),
+            "amount_type": "percent",
+            "type_tax_use": direction,
+            "company_id": self.company_id.id,
+            "active": self._safe_bool(self._find_value(payload, "isActive"), True),
+            "splendid_tax_id": external_id,
+            "splendid_tax_direction": direction,
+            "splendid_is_imported": True,
+        }
+        if tax:
+            tax.write(vals)
+        else:
+            tax = Tax.create(vals)
+        if account:
+            self._set_tax_account(tax, account)
+        self._set_mapping("tax_%s" % direction, external_id, tax, payload, vals["name"])
+        return tax
+
+    def _set_tax_account(self, tax, account):
+        for field_name in ("invoice_repartition_line_ids", "refund_repartition_line_ids"):
+            lines = getattr(tax, field_name, False)
+            if not lines:
+                continue
+            for line in lines.filtered(lambda l: getattr(l, "repartition_type", False) == "tax"):
+                try:
+                    line.account_id = account.id
+                except Exception:  # pylint: disable=broad-except
+                    _logger.debug("Could not set tax repartition account for %s", tax.display_name)
+        return True
+
+    # -------------------------------------------------------------------------
+    # Sales process sync: Splendid sale invoices -> Sale Orders, Deliveries,
+    # Customer Invoices, Returns, Credit Notes and Customer Payments.
+    # -------------------------------------------------------------------------
+
+    def _parse_date(self, value):
+        if not value:
+            return fields.Date.context_today(self)
+        if isinstance(value, datetime):
+            return value.date()
+        text = str(value).replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(text).date()
+        except ValueError:
+            return text[:10]
+
+    def _parse_datetime(self, value):
+        if not value:
+            return fields.Datetime.now()
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None)
+        text = str(value).replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(text).replace(tzinfo=None)
+        except ValueError:
+            return fields.Datetime.now()
+
+    def _default_sale_journal(self):
+        self.ensure_one()
+        journal = self.sale_journal_id
+        if not journal:
+            journal = self.env["account.journal"].with_company(self.company_id).sudo().search([
+                ("company_id", "=", self.company_id.id),
+                ("type", "=", "sale"),
+            ], limit=1)
+        if not journal:
+            raise UserError(_("Please configure a Sales Journal for Splendid sales sync."))
+        return journal
+
+    def _default_bank_journal(self):
+        self.ensure_one()
+        journal = self.bank_journal_id
+        if not journal:
+            journal = self.env["account.journal"].with_company(self.company_id).sudo().search([
+                ("company_id", "=", self.company_id.id),
+                ("type", "in", ("bank", "cash")),
+            ], limit=1)
+        if not journal:
+            raise UserError(_("Please configure a Bank/Cash Journal for Splendid customer payments."))
+        return journal
+
+    def _date_range_payload(self):
+        self.ensure_one()
+        payload = {}
+        if self.sync_from_date or self.sync_to_date:
+            date_filter = {}
+            if self.sync_from_date:
+                date_filter["from"] = "%sT00:00:00" % fields.Date.to_string(self.sync_from_date)
+            if self.sync_to_date:
+                date_filter["to"] = "%sT23:59:59" % fields.Date.to_string(self.sync_to_date)
+            payload["date"] = date_filter
+        return payload
+
+    def _fetch_search_collection(self, endpoint, filter_payload=None, params=None):
+        self.ensure_one()
+        all_rows = []
+        page = 1
+        size = self.page_size or 100
+        while True:
+            request_params = {
+                "page": page,
+                "size": size,
+                "orderBy": "Date",
+                "ascending": "true",
+            }
+            request_params.update(params or {})
+            data = self._api_request("POST", endpoint, params=request_params, payload=filter_payload or {})
+            rows = self._extract_list(data)
+            all_rows.extend(rows)
+            if len(rows) < size or not rows:
+                break
+            page += 1
+            if page > 10000:
+                raise UserError(_("Paging stopped after 10,000 pages for endpoint %s") % endpoint)
+        return all_rows
+
+    def _fetch_sales_list(self, key):
+        endpoints = {
+            "sale_invoices": ("/SaleInvoices", "/SaleInvoices/Search"),
+            "sale_returns": ("/SaleReturns", "/SaleReturns/Search"),
+            "customer_payments": ("/CustomerPayments", "/CustomerPayments/Search"),
+        }
+        endpoint, search_endpoint = endpoints[key]
+        date_payload = self._date_range_payload()
+        if date_payload:
+            return self._fetch_search_collection(search_endpoint, filter_payload=date_payload)
+        return self._fetch_collection(endpoint, params={"orderBy": "Date", "ascending": "true"}, use_paging=True)
+
+    def _fetch_detail_by_id(self, endpoint, external_id):
+        data = self._api_request("GET", "%s/%s" % (endpoint.rstrip("/"), external_id))
+        if isinstance(data, dict):
+            return data
+        rows = self._extract_list(data)
+        return rows[0] if rows else {}
+
+    def _sync_sales_process(self):
+        self.ensure_one()
+        self._sync_sale_invoices()
+        self._sync_sale_returns()
+        self._sync_customer_payments()
+        self.last_sales_process_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_sale_invoices(self):
+        self.ensure_one()
+        rows = self._fetch_sales_list("sale_invoices")
+        imported = failed = 0
+        for row in rows:
+            external_id = self._external_id(row)
+            try:
+                payload = self._fetch_detail_by_id("/SaleInvoices", external_id)
+                record = self._import_sale_invoice_process(payload)
+                imported += 1
+                self._log("sale_invoices", "success", "Sale invoice process imported/updated", payload, external_id, record)
+                self._sync_customer_payments_from_invoice(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid sale invoice %s", external_id)
+                self._log("sale_invoices", "error", str(exc), row, external_id)
+        self._set_count("sale_invoices", len(rows), imported, failed)
+        self.last_sale_invoices_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_sale_returns(self):
+        self.ensure_one()
+        rows = self._fetch_sales_list("sale_returns")
+        imported = failed = 0
+        for row in rows:
+            external_id = self._external_id(row)
+            try:
+                payload = self._fetch_detail_by_id("/SaleReturns", external_id)
+                record = self._import_sale_return_process(payload)
+                imported += 1
+                self._log("sale_returns", "success", "Sale return imported/updated", payload, external_id, record)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid sale return %s", external_id)
+                self._log("sale_returns", "error", str(exc), row, external_id)
+        self._set_count("sale_returns", len(rows), imported, failed)
+        self.last_sale_returns_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_customer_payments(self):
+        self.ensure_one()
+        rows = self._fetch_sales_list("customer_payments")
+        imported = failed = 0
+        for row in rows:
+            external_id = self._external_id(row)
+            try:
+                payload = self._fetch_detail_by_id("/CustomerPayments", external_id)
+                record = self._import_customer_payment_process(payload)
+                imported += 1
+                self._log("customer_payments", "success", "Customer payment imported/updated", payload, external_id, record)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid customer payment %s", external_id)
+                self._log("customer_payments", "error", str(exc), row, external_id)
+        self._set_count("customer_payments", len(rows), imported, failed)
+        self.last_customer_payments_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_customer_payments_from_invoice(self, invoice_payload):
+        for item in self._find_value(invoice_payload, "customerSingleSettledEntryItems", default=[]) or []:
+            if not isinstance(item, dict):
+                continue
+            if str(self._find_value(item, "source", default="")).lower() != "customerpayment":
+                continue
+            payment_id = self._find_value(item, "sourceId")
+            if not payment_id:
+                continue
+            if self._mapped_record("customer_payment", payment_id, "account.payment"):
+                continue
+            try:
+                payment_payload = self._fetch_detail_by_id("/CustomerPayments", payment_id)
+                payment = self._import_customer_payment_process(payment_payload)
+                self._log("customer_payments", "success", "Customer payment imported from sale invoice settlement", payment_payload, payment_id, payment)
+            except Exception as exc:  # pylint: disable=broad-except
+                self._log("customer_payments", "error", str(exc), item, payment_id)
+
+    def _resolve_customer(self, payload):
+        external_id = self._find_value(payload, "customerId")
+        partner = self._mapped_record("customer", external_id, "res.partner") if external_id else self.env["res.partner"]
         if partner:
             return partner
-        nested = self._nested(payload, nested_key)
+        nested = self._nested(payload, "customer")
         if nested:
-            return self._import_partner(nested, kind)
-        return self.env["res.partner"]
+            return self._import_partner(nested, "customer")
+        raise UserError(_("Customer could not be resolved for Splendid record %s") % self._external_id(payload))
 
     def _resolve_product_from_line(self, line):
         external_id = self._find_value(line, "productId", "ProductId", "itemId", "productID")
@@ -1555,8 +1164,7 @@ class SplendidAccountConnection(models.Model):
         nested = self._nested(line, "product") or self._nested(line, "item")
         if nested:
             return self._import_products(nested)
-        # Last fallback: try SKU/code on the transaction line.
-        sku = self._clean_product_code(self._find_value(line, "sku", "productCode", "code", "productName"))
+        sku = self._clean_product_code(self._find_value(line, "sku", "productCode", "code", "barcode"))
         if sku:
             domain = [("default_code", "=", sku)]
             if "company_id" in self.env["product.template"]._fields:
@@ -1564,285 +1172,836 @@ class SplendidAccountConnection(models.Model):
             product = self.env["product.template"].with_company(self.company_id).sudo().search(domain, limit=1)
             if product:
                 return product
-        return self.env["product.template"]
+        raise UserError(_("Product could not be resolved for Splendid line %s") % (self._find_value(line, "id") or ""))
 
-    def _import_customer_receipts(self, payload):
-        return self._import_payment(payload, "customer_receipt", "inbound", "customer")
-
-    def _import_vendor_payments(self, payload):
-        return self._import_payment(payload, "vendor_payment", "outbound", "supplier")
-
-    def _import_payment(self, payload, external_model, payment_type, partner_type):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record(external_model, external_id, "account.payment")
-        partner_kind = "customer" if partner_type == "customer" else "vendor"
-        partner = self._resolve_partner_from_payload(payload, partner_kind)
-        journal = self._resolve_journal_for_payment(payload, payment_type)
-        pml = journal.inbound_payment_method_line_ids[:1] if payment_type == "inbound" else journal.outbound_payment_method_line_ids[:1]
-        amount = float(self._find_value(payload, "totalAmount", "amount", "allocatedAmount", default=0.0) or 0.0)
-        vals = {
-            "payment_type": payment_type,
-            "partner_type": partner_type,
-            "partner_id": partner.id if partner else False,
-            "amount": amount,
-            "date": self._parse_date(self._find_value(payload, "date")),
-            "journal_id": journal.id,
-            "ref": self._find_value(payload, "reference", "number", "comments") or external_id,
-            "splendid_external_id": external_id,
-            "splendid_source_model": external_model,
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
-            "company_id": self.company_id.id,
-        }
-        if pml:
-            vals["payment_method_line_id"] = pml.id
-        if existing:
-            payment = existing
-            if self.update_existing_draft_records and getattr(payment, "state", False) == "draft":
-                payment.write(vals)
-        else:
-            payment = self.env["account.payment"].with_company(self.company_id).sudo().create(vals)
-        self._set_mapping(external_model, external_id, payment, payload, vals["ref"])
-        if self.auto_post_moves and not self.import_as_draft and getattr(payment, "state", False) == "draft":
-            payment.action_post()
-        return payment
-
-    def _import_journal_entries(self, payload):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record("journal_entry", external_id, "account.move")
-        details = self._find_value(payload, "journalEntryDetails") or []
-        line_cmds = []
-        total_debit = 0.0
-        total_credit = 0.0
-        for line in details:
-            account = self._resolve_splendid_account(line, fallback_kind="suspense", required=True)
-            partner = self._resolve_generic_contact(line)
-            debit = float(self._find_value(line, "debit", default=0.0) or 0.0)
-            credit = float(self._find_value(line, "credit", default=0.0) or 0.0)
-            total_debit += debit
-            total_credit += credit
-            vals = {
-                "name": self._find_value(line, "description") or self._find_value(payload, "narration") or "Splendid journal line",
-                "account_id": account.id,
-                "debit": debit,
-                "credit": credit,
-            }
-            if partner:
-                vals["partner_id"] = partner.id
-            line_cmds.append((0, 0, vals))
-        if line_cmds and round(total_debit - total_credit, 2):
-            diff = round(total_debit - total_credit, 2)
-            suspense = self._default_account("suspense")
-            line_cmds.append((0, 0, {
-                "name": "Splendid auto-balance",
-                "account_id": suspense.id,
-                "debit": abs(diff) if diff < 0 else 0.0,
-                "credit": diff if diff > 0 else 0.0,
-            }))
-        if not line_cmds:
-            amount = float(self._find_value(payload, "amount", default=0.0) or 0.0)
-            line_cmds = self._balanced_entry_lines("Splendid journal", self._default_account("expense"), self._default_account("suspense"), amount)
-        vals = {
-            "move_type": "entry",
-            "date": self._parse_date(self._find_value(payload, "date")),
-            "journal_id": self._default_journal("general").id,
-            "ref": self._find_value(payload, "reference", "number", "narration") or external_id,
-            "line_ids": line_cmds,
-            "splendid_external_id": external_id,
-            "splendid_source_model": "journal_entry",
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
-            "company_id": self.company_id.id,
-        }
-        if existing:
-            move = existing
-            if self.update_existing_draft_records and move.state == "draft":
-                write_vals = dict(vals)
-                write_vals.pop("move_type", None)
-                write_vals.pop("company_id", None)
-                write_vals["line_ids"] = [(5, 0, 0)] + line_cmds
-                move.with_context(check_move_validity=False).write(write_vals)
-        else:
-            move = self.env["account.move"].with_company(self.company_id).sudo().create(vals)
-        self._set_mapping("journal_entry", external_id, move, payload, move.ref)
-        if self.auto_post_moves and not self.import_as_draft:
-            move.action_post()
-        return move
-
-    def _import_expenses(self, payload):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record("expense", external_id, "account.move")
-        details = self._find_value(payload, "expenseDetails") or []
-        debit_cmds = []
-        total = 0.0
-        for line in details:
-            account = self._resolve_splendid_account(line, fallback_kind="expense", required=True)
-            amount = float(self._find_value(line, "netAmount", "grossAmount", default=0.0) or 0.0)
-            total += amount
-            debit_cmds.append((0, 0, {"name": self._find_value(line, "description") or "Splendid expense", "account_id": account.id, "debit": amount, "credit": 0.0}))
-        if not debit_cmds:
-            total = float(self._find_value(payload, "netAmount", "grossAmount", default=0.0) or 0.0)
-            debit_cmds.append((0, 0, {"name": self._find_value(payload, "comments", "narration") or "Splendid expense", "account_id": self._default_account("expense").id, "debit": total, "credit": 0.0}))
-        credit_account = self._resolve_splendid_account(payload, fallback_kind="suspense", required=True)
-        debit_cmds.append((0, 0, {"name": self._find_value(payload, "reference", "number") or "Splendid expense payment", "account_id": credit_account.id, "debit": 0.0, "credit": total}))
-        vals = {
-            "move_type": "entry",
-            "date": self._parse_date(self._find_value(payload, "date")),
-            "journal_id": self._default_journal("general").id,
-            "ref": self._find_value(payload, "reference", "number", "comments") or external_id,
-            "line_ids": debit_cmds,
-            "splendid_external_id": external_id,
-            "splendid_source_model": "expense",
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
-            "company_id": self.company_id.id,
-        }
-        if existing:
-            move = existing
-            if self.update_existing_draft_records and move.state == "draft":
-                write_vals = dict(vals)
-                write_vals.pop("move_type", None)
-                write_vals.pop("company_id", None)
-                write_vals["line_ids"] = [(5, 0, 0)] + debit_cmds
-                move.with_context(check_move_validity=False).write(write_vals)
-        else:
-            move = self.env["account.move"].with_company(self.company_id).sudo().create(vals)
-        self._set_mapping("expense", external_id, move, payload, move.ref)
-        if self.auto_post_moves and not self.import_as_draft:
-            move.action_post()
-        return move
-
-    def _import_manufacturing_orders(self, payload):
-        external_id = self._external_id(payload)
-        existing = self._mapped_record("manufacturing_order", external_id, "mrp.production")
-        if existing:
-            return existing
-        product_tmpl = self._mapped_record("product", self._find_value(payload, "assemblyProductId"), "product.template")
-        if not product_tmpl and self._nested(payload, "assemblyProduct"):
-            product_tmpl = self._import_products(self._nested(payload, "assemblyProduct"))
-        if not product_tmpl:
-            raise UserError(_("Manufacturing product is missing for Splendid Job Order %s.") % external_id)
-        product = self._stockable_product_variant(product_tmpl)
-        qty = float(self._find_value(payload, "quantityToProduce", "actualQuantityProduced", default=1.0) or 1.0)
-        warehouse = self._resolve_warehouse(payload)
-        location = self._warehouse_stock_location(warehouse)
-        bom = self.env["mrp.bom"].with_company(self.company_id).sudo().search([
-            ("product_tmpl_id", "=", product_tmpl.id), ("company_id", "in", [False, self.company_id.id])
+    def _resolve_warehouse(self, payload=None, warehouse_id=False):
+        payload = payload or {}
+        external_id = warehouse_id or self._find_value(payload, "warehouseId", "warehouseID")
+        warehouse = self._mapped_record("warehouse", external_id, "stock.warehouse") if external_id else self.env["stock.warehouse"]
+        if warehouse:
+            return warehouse
+        nested = self._nested(payload, "warehouse")
+        if nested:
+            return self._import_warehouses(nested)
+        warehouse = self.env["stock.warehouse"].with_company(self.company_id).sudo().search([
+            ("company_id", "=", self.company_id.id)
         ], limit=1)
-        raw_move_cmds = self._manufacturing_raw_move_cmds(payload, location)
+        if not warehouse:
+            raise UserError(_("Please configure at least one warehouse for company %s") % self.company_id.display_name)
+        return warehouse
+
+    def _warehouse_customer_location(self):
+        loc = self.env.ref("stock.stock_location_customers", raise_if_not_found=False)
+        if not loc:
+            loc = self.env["stock.location"].sudo().search([("usage", "=", "customer")], limit=1)
+        if not loc:
+            raise UserError(_("Customer stock location was not found."))
+        return loc
+
+    def _line_discount_percent(self, line):
+        discount = self._find_value(line, "discountInPercent")
+        if discount not in (False, None, ""):
+            return self._safe_float(discount)
+        qty = self._safe_float(self._find_value(line, "quantity"), 1.0) or 1.0
+        price = self._safe_float(self._find_value(line, "price", "tagPrice"), 0.0)
+        gross = self._safe_float(self._find_value(line, "grossAmount"), 0.0)
+        disc_amt = self._safe_float(self._find_value(line, "discountAmount"), 0.0)
+        base = gross or qty * price
+        return (disc_amt / base * 100.0) if base and disc_amt else 0.0
+
+    def _resolve_taxes_from_line(self, line, direction="sale"):
+        taxes = self.env["account.tax"].with_company(self.company_id).sudo()
+        raw_taxes = self._find_value(line, "taxes", default=[]) or []
+        for item in raw_taxes:
+            tax_id = self._find_value(item, "taxId", "id") if isinstance(item, dict) else item
+            if not tax_id:
+                continue
+            tax = self._mapped_record("tax", "%s_%s" % (tax_id, direction), "account.tax")
+            if not tax:
+                tax = self.env["account.tax"].with_company(self.company_id).sudo().search([
+                    ("company_id", "=", self.company_id.id),
+                    ("splendid_tax_id", "=", str(tax_id)),
+                    ("type_tax_use", "=", direction),
+                ], limit=1)
+            taxes |= tax
+        return taxes
+
+    def _resolve_line_account(self, line, product_tmpl, fallback_kind="income"):
+        account_id = self._find_value(line, "accountId")
+        account_code = self._find_value(self._nested(line, "account"), "code")
+        account = self._resolve_account(account_id, account_code)
+        if account:
+            return account
+        if product_tmpl:
+            product = product_tmpl.product_variant_id
+            if fallback_kind == "income":
+                account = product.property_account_income_id or product.categ_id.property_account_income_categ_id
+            else:
+                account = product.property_account_expense_id or product.categ_id.property_account_expense_categ_id
+            if account:
+                return account
+        account = self._default_account(fallback_kind)
+        if not account:
+            raise UserError(_("No %s account found/configured for Splendid transaction line.") % fallback_kind)
+        return account
+
+    def _sale_order_line_vals(self, line):
+        product_tmpl = self._resolve_product_from_line(line)
+        product = product_tmpl.product_variant_id
+        taxes = self._resolve_taxes_from_line(line, "sale")
         vals = {
             "product_id": product.id,
-            "product_qty": qty,
-            "product_uom_id": product.uom_id.id,
-            "origin": self._find_value(payload, "number", "reference") or external_id,
-            "date_start": self._parse_datetime(self._find_value(payload, "date")),
-            "company_id": self.company_id.id,
-            "location_src_id": location.id,
-            "location_dest_id": location.id,
-            "splendid_external_id": external_id,
-            "splendid_source_model": "manufacturing_order",
-            "splendid_is_imported": True,
-            "splendid_raw_payload": payload,
+            "name": self._find_value(line, "description") or product.display_name,
+            "product_uom_qty": self._safe_float(self._find_value(line, "quantity"), 1.0),
+            "price_unit": self._safe_float(self._find_value(line, "price", "tagPrice"), 0.0),
+            "discount": self._line_discount_percent(line),
+            "product_uom": product.uom_id.id,
         }
-        if bom:
-            vals["bom_id"] = bom.id
-        if raw_move_cmds:
-            vals["move_raw_ids"] = raw_move_cmds
-        production = self.env["mrp.production"].with_company(self.company_id).sudo().create(vals)
-        self._set_mapping("manufacturing_order", external_id, production, payload, production.name)
-        if self.auto_confirm_mrp and production.state == "draft":
-            production.action_confirm()
-        return production
+        if taxes:
+            vals["tax_id"] = [(6, 0, taxes.ids)]
+        return vals
 
-    def _manufacturing_raw_move_cmds(self, payload, location):
-        details = self._find_value(payload, "jobOrderDetails", "details") or []
-        if not isinstance(details, list):
-            details = []
-        cmds = []
+    def _invoice_line_vals_from_sale_line(self, line, sale_line=False, move_type="out_invoice"):
+        product_tmpl = self._resolve_product_from_line(line)
+        product = product_tmpl.product_variant_id
+        taxes = self._resolve_taxes_from_line(line, "sale")
+        account = self._resolve_line_account(line, product_tmpl, "income")
+        vals = {
+            "product_id": product.id,
+            "name": self._find_value(line, "description") or product.display_name,
+            "quantity": self._safe_float(self._find_value(line, "quantity"), 1.0),
+            "price_unit": self._safe_float(self._find_value(line, "price", "tagPrice"), 0.0),
+            "discount": self._line_discount_percent(line),
+            "account_id": account.id,
+        }
+        if taxes:
+            vals["tax_ids"] = [(6, 0, taxes.ids)]
+        if sale_line and "sale_line_ids" in self.env["account.move.line"]._fields:
+            vals["sale_line_ids"] = [(6, 0, [sale_line.id])]
+        return vals
+
+    def _sale_invoice_details(self, payload):
+        details = self._find_value(payload, "saleInvoiceDetails", default=[]) or []
+        return details if isinstance(details, list) else []
+
+    def _sale_return_details(self, payload):
+        details = self._find_value(payload, "saleReturnDetails", default=[]) or []
+        return details if isinstance(details, list) else []
+
+    def _prepare_sale_order(self, payload):
+        external_id = self._external_id(payload)
+        order = self._mapped_record("sale_invoice_order", external_id, "sale.order")
+        if order:
+            return order
+        partner = self._resolve_customer(payload)
+        details = self._sale_invoice_details(payload)
+        if not details:
+            raise UserError(_("No sale invoice lines found for Splendid invoice %s") % external_id)
+        first_warehouse = self._resolve_warehouse(details[0]) if details else False
+        order_vals = {
+            "partner_id": partner.id,
+            "date_order": self._parse_datetime(self._find_value(payload, "date")),
+            "origin": self._find_value(payload, "number") or external_id,
+            "client_order_ref": self._find_value(payload, "reference") or self._find_value(payload, "number") or external_id,
+            "company_id": self.company_id.id,
+            "order_line": [(0, 0, self._sale_order_line_vals(line)) for line in details],
+            "splendid_sale_invoice_id": external_id,
+            "splendid_sale_invoice_number": self._find_value(payload, "number"),
+            "splendid_is_imported": True,
+        }
+        if first_warehouse and "warehouse_id" in self.env["sale.order"]._fields:
+            order_vals["warehouse_id"] = first_warehouse.id
+        order = self.env["sale.order"].with_company(self.company_id).sudo().create(order_vals)
+        self._set_mapping("sale_invoice_order", external_id, order, payload, order.name)
+        if self.auto_confirm_sale_orders and order.state in ("draft", "sent"):
+            order.action_confirm()
+        if self.auto_create_sale_deliveries:
+            self._mark_sale_delivery_from_order(order, payload)
+        return order
+
+    def _mark_sale_delivery_from_order(self, order, payload):
+        external_id = self._external_id(payload)
+        pickings = order.picking_ids.filtered(lambda p: p.state != "cancel") if "picking_ids" in order._fields else self.env["stock.picking"]
+        for picking in pickings:
+            vals = {
+                "splendid_sale_invoice_id": external_id,
+                "splendid_source_model": "sale_invoice_delivery",
+                "splendid_is_imported": True,
+            }
+            if "splendid_raw_payload" in picking._fields:
+                vals["splendid_raw_payload"] = payload
+            picking.sudo().write(vals)
+            self._set_mapping("sale_invoice_delivery", "%s_%s" % (external_id, picking.id), picking, payload, picking.name)
+            if self.auto_validate_sale_deliveries:
+                self._validate_picking(picking)
+        return pickings
+
+    def _validate_picking(self, picking):
+        if not picking or picking.state in ("done", "cancel"):
+            return False
+        if picking.state == "draft":
+            picking.action_confirm()
+        try:
+            picking.action_assign()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        for move in picking.move_ids.filtered(lambda m: m.state not in ("done", "cancel")):
+            qty = move.product_uom_qty
+            if "quantity" in move._fields:
+                move.quantity = qty
+            elif "quantity_done" in move._fields:
+                move.quantity_done = qty
+        picking.button_validate()
+        return True
+
+    def _get_or_create_discount_product(self):
+        self.ensure_one()
+
+        Product = self.env["product.template"].with_company(self.company_id).sudo()
+
+        # Pehle existing Discount product find karo.
+        domain = [
+            "|",
+            ("default_code", "=", "DISCOUNT"),
+            ("name", "=", "Discount"),
+        ]
+
+        if "company_id" in Product._fields:
+            domain = [
+                "&",
+                "|",
+                ("company_id", "=", False),
+                ("company_id", "=", self.company_id.id),
+            ] + domain
+
+        product_tmpl = Product.search(domain, limit=1)
+        if product_tmpl:
+            vals = {}
+
+            # Ensure product is service type.
+            if "type" in Product._fields:
+                vals["type"] = "service"
+
+            if "detailed_type" in Product._fields:
+                vals["detailed_type"] = "service"
+
+            if "sale_ok" in Product._fields:
+                vals["sale_ok"] = True
+
+            if "purchase_ok" in Product._fields:
+                vals["purchase_ok"] = False
+
+            if vals:
+                product_tmpl.write(vals)
+
+            return product_tmpl
+
+        vals = {
+            "name": "Discount",
+            "default_code": "DISCOUNT",
+            "list_price": 0.0,
+            "standard_price": 0.0,
+        }
+
+        if "sale_ok" in Product._fields:
+            vals["sale_ok"] = True
+
+        if "purchase_ok" in Product._fields:
+            vals["purchase_ok"] = False
+
+        if "type" in Product._fields:
+            vals["type"] = "service"
+
+        if "detailed_type" in Product._fields:
+            vals["detailed_type"] = "service"
+
+        if "company_id" in Product._fields:
+            vals["company_id"] = self.company_id.id
+
+        income_account = self.default_income_account_id or self._default_account("income")
+        if income_account and "property_account_income_id" in Product._fields:
+            vals["property_account_income_id"] = income_account.id
+
+        product_tmpl = Product.create(vals)
+        return product_tmpl
+
+
+    def _sale_invoice_discount_line_cmd(self, payload):
+        self.ensure_one()
+
+        discount_amount = self._safe_float(
+            self._find_value(payload, "discountAmount"),
+            0.0,
+        )
+
+        if discount_amount <= 0:
+            return False
+
+        discount_product_tmpl = self._get_or_create_discount_product()
+        discount_product = discount_product_tmpl.product_variant_id
+
+        account = (
+            discount_product.property_account_income_id
+            or discount_product.categ_id.property_account_income_categ_id
+            or self.default_income_account_id
+            or self._default_account("income")
+        )
+
+        if not account:
+            raise UserError(_("Income account is required for Discount product."))
+
+        return (0, 0, {
+            "product_id": discount_product.id,
+            "name": "Discount",
+            "quantity": 1.0,
+            "price_unit": -discount_amount,
+            "discount": 0.0,
+            "account_id": account.id,
+            "tax_ids": [(6, 0, [])],
+        })
+
+
+
+    def _get_or_create_tax_amount_product(self):
+        self.ensure_one()
+
+        Product = self.env["product.template"].with_company(self.company_id).sudo()
+
+        domain = [
+            "|",
+            ("default_code", "=", "TAX_AMOUNT"),
+            ("name", "=", "Tax Amount"),
+        ]
+
+        if "company_id" in Product._fields:
+            domain = [
+                "&",
+                "|",
+                ("company_id", "=", False),
+                ("company_id", "=", self.company_id.id),
+            ] + domain
+
+        product_tmpl = Product.search(domain, limit=1)
+
+        if product_tmpl:
+            vals = {}
+
+            if "type" in Product._fields:
+                vals["type"] = "service"
+
+            if "detailed_type" in Product._fields:
+                vals["detailed_type"] = "service"
+
+            if "sale_ok" in Product._fields:
+                vals["sale_ok"] = True
+
+            if "purchase_ok" in Product._fields:
+                vals["purchase_ok"] = False
+
+            if vals:
+                product_tmpl.write(vals)
+
+            return product_tmpl
+
+        vals = {
+            "name": "Tax Amount",
+            "default_code": "TAX_AMOUNT",
+            "list_price": 0.0,
+            "standard_price": 0.0,
+        }
+
+        if "sale_ok" in Product._fields:
+            vals["sale_ok"] = True
+
+        if "purchase_ok" in Product._fields:
+            vals["purchase_ok"] = False
+
+        if "type" in Product._fields:
+            vals["type"] = "service"
+
+        if "detailed_type" in Product._fields:
+            vals["detailed_type"] = "service"
+
+        if "company_id" in Product._fields:
+            vals["company_id"] = self.company_id.id
+
+        income_account = self.default_income_account_id or self._default_account("income")
+        if income_account and "property_account_income_id" in Product._fields:
+            vals["property_account_income_id"] = income_account.id
+
+        product_tmpl = Product.create(vals)
+        return product_tmpl
+
+
+    def _sale_invoice_tax_amount_line_cmd(self, payload):
+        self.ensure_one()
+
+        tax_amount = self._safe_float(
+            self._find_value(payload, "taxAmount"),
+            0.0,
+        )
+
+        if tax_amount <= 0:
+            return False
+
+        tax_product_tmpl = self._get_or_create_tax_amount_product()
+        tax_product = tax_product_tmpl.product_variant_id
+
+        account = (
+            tax_product.property_account_income_id
+            or tax_product.categ_id.property_account_income_categ_id
+            or self.default_income_account_id
+            or self._default_account("income")
+        )
+
+        if not account:
+            raise UserError(_("Income account is required for Tax Amount product."))
+
+        return (0, 0, {
+            "product_id": tax_product.id,
+            "name": "Tax Amount",
+            "quantity": 1.0,
+            "price_unit": tax_amount,
+            "discount": 0.0,
+            "account_id": account.id,
+            "tax_ids": [(6, 0, [])],
+        })
+
+    def _import_sale_invoice_process(self, payload):
+        external_id = self._external_id(payload)
+
+        existing_invoice = self._mapped_record("sale_invoice", external_id, "account.move")
+        sale_order = self._prepare_sale_order(payload)
+
+        if existing_invoice:
+            return existing_invoice
+
+        details = self._sale_invoice_details(payload)
+        if not details:
+            raise UserError(_("No sale invoice lines found for Splendid invoice %s") % external_id)
+
+        sale_lines_by_product = {}
+        for sol in sale_order.order_line:
+            if sol.product_id:
+                sale_lines_by_product.setdefault(sol.product_id.id, sol)
+
+        invoice_lines = []
+
         for line in details:
-            if self._find_value(line, "isParent", default=False):
-                continue
-            if self._find_value(line, "isInput", default=True) is False:
-                continue
             product_tmpl = self._resolve_product_from_line(line)
-            if not product_tmpl:
+            product = product_tmpl.product_variant_id
+            sale_line = sale_lines_by_product.get(product.id)
+
+            invoice_lines.append((0, 0, self._invoice_line_vals_from_sale_line(
+                line,
+                sale_line=sale_line,
+                move_type="out_invoice",
+            )))
+
+        # Header-level Splendid discountAmount.
+        # Agar discountAmount > 0 ho to Discount service product ki negative line add hogi.
+        discount_line = self._sale_invoice_discount_line_cmd(payload)
+        if discount_line:
+            invoice_lines.append(discount_line)
+
+        # Header-level Splendid taxAmount.
+        # Agar taxAmount > 0 ho to Tax Amount service product ki positive line add hogi.
+        tax_amount_line = self._sale_invoice_tax_amount_line_cmd(payload)
+        if tax_amount_line:
+            invoice_lines.append(tax_amount_line)
+
+        journal = self._default_sale_journal()
+
+        move_vals = {
+            "move_type": "out_invoice",
+            "partner_id": sale_order.partner_id.id,
+            "invoice_date": self._parse_date(self._find_value(payload, "date")),
+            "invoice_date_due": self._parse_date(self._find_value(payload, "dueDate")) if self._find_value(payload, "dueDate") else False,
+            "journal_id": journal.id,
+            "invoice_origin": sale_order.name,
+            "ref": self._find_value(payload, "number", "reference") or external_id,
+            "invoice_line_ids": invoice_lines,
+            "company_id": self.company_id.id,
+            "splendid_sale_invoice_id": external_id,
+            "splendid_source_model": "sale_invoice",
+            "splendid_is_imported": True,
+        }
+
+        if "splendid_raw_payload" in self.env["account.move"]._fields:
+            move_vals["splendid_raw_payload"] = payload
+
+        invoice = self.env["account.move"].with_company(self.company_id).sudo().with_context(
+            default_move_type="out_invoice"
+        ).create(move_vals)
+
+        self._set_mapping(
+            "sale_invoice",
+            external_id,
+            invoice,
+            payload,
+            move_vals["ref"],
+        )
+
+        if self.auto_post_sale_invoices and invoice.state == "draft":
+            invoice.action_post()
+
+        return invoice
+    
+    def _get_original_sale_invoice(self, payload):
+        for item in self._find_value(payload, "saleReturnSettlementDetails", default=[]) or []:
+            if not isinstance(item, dict):
                 continue
-            product = self._stockable_product_variant(product_tmpl)
-            qty = float(self._find_value(line, "quantity", "defaultQuantity", default=0.0) or 0.0)
+            if str(self._find_value(item, "source", default="")).lower() == "saleinvoice":
+                source_id = self._find_value(item, "sourceId")
+                move = self._mapped_record("sale_invoice", source_id, "account.move") if source_id else self.env["account.move"]
+                if move:
+                    return move
+        source_id = self._find_value(payload, "saleInvoiceId")
+        return self._mapped_record("sale_invoice", source_id, "account.move") if source_id else self.env["account.move"]
+
+    def _import_sale_return_process(self, payload):
+        external_id = self._external_id(payload)
+        credit_note = self._mapped_record("sale_return", external_id, "account.move")
+        if not credit_note:
+            credit_note = self._create_sale_return_credit_note(payload)
+        if self.auto_create_return_transfers:
+            self._create_sale_return_transfer(payload)
+        return credit_note
+
+    def _create_sale_return_credit_note(self, payload):
+        external_id = self._external_id(payload)
+        partner = self._resolve_customer(payload)
+        original_invoice = self._get_original_sale_invoice(payload)
+        invoice_lines = []
+        for line in self._sale_return_details(payload):
+            invoice_lines.append((0, 0, self._invoice_line_vals_from_sale_line(line, sale_line=False, move_type="out_refund")))
+        if not invoice_lines:
+            raise UserError(_("No sale return lines found for Splendid return %s") % external_id)
+        vals = {
+            "move_type": "out_refund",
+            "partner_id": partner.id,
+            "invoice_date": self._parse_date(self._find_value(payload, "date")),
+            "journal_id": self._default_sale_journal().id,
+            "invoice_origin": original_invoice.name if original_invoice else self._find_value(payload, "saleInvoiceNumber"),
+            "ref": self._find_value(payload, "number", "reference") or external_id,
+            "invoice_line_ids": invoice_lines,
+            "company_id": self.company_id.id,
+            "splendid_sale_return_id": external_id,
+            "splendid_source_model": "sale_return",
+            "splendid_is_imported": True,
+        }
+        if original_invoice and "reversed_entry_id" in self.env["account.move"]._fields:
+            vals["reversed_entry_id"] = original_invoice.id
+        if "splendid_raw_payload" in self.env["account.move"]._fields:
+            vals["splendid_raw_payload"] = payload
+        credit_note = self.env["account.move"].with_company(self.company_id).sudo().with_context(default_move_type="out_refund").create(vals)
+        self._set_mapping("sale_return", external_id, credit_note, payload, vals["ref"])
+        if self.auto_post_sale_invoices and credit_note.state == "draft":
+            credit_note.action_post()
+        if original_invoice and credit_note.state == "posted" and self.auto_reconcile_customer_payments:
+            self._reconcile_moves([original_invoice, credit_note])
+        return credit_note
+
+    def _create_sale_return_transfer(self, payload):
+        external_id = self._external_id(payload)
+        existing = self._mapped_record("sale_return_transfer", external_id, "stock.picking")
+        if existing:
+            return existing
+        details = self._sale_return_details(payload)
+        if not details:
+            return self.env["stock.picking"]
+        warehouse = self._resolve_warehouse(details[0])
+        picking_type = warehouse.in_type_id or self.env["stock.picking.type"].with_company(self.company_id).sudo().search([
+            ("code", "=", "incoming"),
+            ("company_id", "=", self.company_id.id),
+        ], limit=1)
+        source_location = self._warehouse_customer_location()
+        dest_location = warehouse.lot_stock_id
+        move_cmds = []
+        for line in details:
+            product_tmpl = self._resolve_product_from_line(line)
+            product = product_tmpl.product_variant_id
+            qty = self._safe_float(self._find_value(line, "quantity"), 0.0)
             if qty <= 0:
                 continue
-            cmds.append((0, 0, {
+            move_cmds.append((0, 0, {
                 "name": self._find_value(line, "description") or product.display_name,
                 "product_id": product.id,
                 "product_uom_qty": qty,
                 "product_uom": product.uom_id.id,
-                "location_id": location.id,
-                "location_dest_id": self.env.ref("stock.stock_location_production").id,
+                "location_id": source_location.id,
+                "location_dest_id": dest_location.id,
                 "company_id": self.company_id.id,
             }))
-        return cmds
-
-    def _resolve_generic_contact(self, payload):
-        contact_id = self._find_value(payload, "contactId")
-        if not contact_id:
-            return self.env["res.partner"]
-        partner = self._mapped_record("customer", contact_id, "res.partner")
-        if partner:
-            return partner
-        return self._mapped_record("vendor", contact_id, "res.partner")
-
-    def _balanced_entry_lines(self, label, debit_account, credit_account, amount):
-        return [
-            (0, 0, {"name": label, "account_id": debit_account.id, "debit": amount, "credit": 0.0}),
-            (0, 0, {"name": label, "account_id": credit_account.id, "debit": 0.0, "credit": amount}),
-        ]
-
-    def _sync_boms(self):
-        self.ensure_one()
-        try:
-            parents = self._fetch_collection("/Products/AssemblyProducts")
-        except Exception as exc:  # pylint: disable=broad-except
-            self._log("boms", "error", _("Could not fetch assembly products: %s") % exc)
-            return
-        for parent_payload in parents:
-            product_id = self._external_id(parent_payload)
-            try:
-                components = self._fetch_collection("/Products/%s/Assemblies" % product_id, use_paging=False)
-                record = self._import_bom(parent_payload, components)
-                self._log("boms", "success", "Imported BOM", parent_payload, product_id, record)
-            except Exception as exc:  # pylint: disable=broad-except
-                _logger.exception("Failed to import BOM for product %s", product_id)
-                self._log("boms", "error", str(exc), parent_payload, product_id)
-
-    def _import_bom(self, parent_payload, components):
-        parent_external_id = self._external_id(parent_payload)
-        parent_tmpl = self._mapped_record("product", parent_external_id, "product.template")
-        if not parent_tmpl:
-            parent_tmpl = self._import_products(parent_payload)
-        Bom = self.env["mrp.bom"].with_company(self.company_id).sudo()
-        bom = Bom.search([("product_tmpl_id", "=", parent_tmpl.id), ("company_id", "in", [False, self.company_id.id])], limit=1)
-        line_cmds = [(5, 0, 0)]
-        for comp in components:
-            if self._find_value(comp, "isInput", default=True) is False:
-                continue
-            child_external_id = self._find_value(comp, "productId")
-            if str(child_external_id) == str(parent_external_id):
-                continue
-            child_tmpl = self._mapped_record("product", child_external_id, "product.template")
-            if not child_tmpl and self._nested(comp, "product"):
-                child_tmpl = self._import_products(self._nested(comp, "product"))
-            if not child_tmpl:
-                continue
-            line_cmds.append((0, 0, {"product_id": child_tmpl.product_variant_id.id, "product_qty": float(self._find_value(comp, "quantity", default=1.0) or 1.0)}))
-        vals = {
-            "product_tmpl_id": parent_tmpl.id,
-            "type": "normal",
+        if not move_cmds:
+            return self.env["stock.picking"]
+        picking_vals = {
+            "picking_type_id": picking_type.id,
+            "partner_id": self._resolve_customer(payload).id,
+            "location_id": source_location.id,
+            "location_dest_id": dest_location.id,
+            "origin": self._find_value(payload, "number") or external_id,
+            "scheduled_date": self._parse_datetime(self._find_value(payload, "date")),
             "company_id": self.company_id.id,
-            "bom_line_ids": line_cmds,
+            "move_ids": move_cmds,
+            "splendid_sale_return_id": external_id,
+            "splendid_source_model": "sale_return_transfer",
+            "splendid_is_imported": True,
         }
-        if bom:
-            bom.write(vals)
-        else:
-            bom = Bom.create(vals)
-        self._set_mapping("bom", parent_external_id, bom, parent_payload, parent_tmpl.display_name)
-        return bom
+        if "splendid_raw_payload" in self.env["stock.picking"]._fields:
+            picking_vals["splendid_raw_payload"] = payload
+        picking = self.env["stock.picking"].with_company(self.company_id).sudo().create(picking_vals)
+        self._set_mapping("sale_return_transfer", external_id, picking, payload, picking.name)
+        if picking.state == "draft":
+            picking.action_confirm()
+        if self.auto_validate_return_transfers:
+            self._validate_picking(picking)
+        return picking
+
+    def _resolve_journal_for_customer_payment(self, payload):
+        account_id = False
+        account_code = False
+        for line in self._find_value(payload, "customerPaymentDetails", default=[]) or []:
+            if isinstance(line, dict):
+                account_id = self._find_value(line, "accountId")
+                account_code = self._find_value(self._nested(line, "account"), "code")
+                break
+        account = self._resolve_account(account_id, account_code)
+        Journal = self.env["account.journal"].with_company(self.company_id).sudo()
+        if account:
+            journal = Journal.search([
+                ("company_id", "=", self.company_id.id),
+                ("type", "in", ("bank", "cash")),
+                ("default_account_id", "=", account.id),
+            ], limit=1)
+            if journal:
+                return journal
+            journal = Journal.search([
+                ("company_id", "=", self.company_id.id),
+                ("splendid_bank_account_account_id", "=", str(account_id or "")),
+            ], limit=1)
+            if journal:
+                return journal
+        return self._default_bank_journal()
+
+    def _import_customer_payment_process(self, payload):
+        external_id = self._external_id(payload)
+
+        payment = self._mapped_record("customer_payment", external_id, "account.payment")
+        if payment:
+            # Existing payment ko bhi post/reconcile karo.
+            if self.auto_post_customer_payments and getattr(payment, "state", False) == "draft":
+                payment.action_post()
+            if self.auto_reconcile_customer_payments:
+                self._reconcile_customer_payment(payment, payload)
+            return payment
+
+        partner = self._resolve_customer(payload)
+        journal = self._resolve_journal_for_customer_payment(payload)
+
+        amount = self._safe_float(
+            self._find_value(payload, "totalAmount", "allocatedAmount", "amount"),
+            0.0,
+        )
+
+        payment_ref = self._find_value(payload, "number", "reference", "comments") or external_id
+
+        vals = {
+            "payment_type": "inbound",
+            "partner_type": "customer",
+            "partner_id": partner.id,
+            "amount": amount,
+            "date": self._parse_date(self._find_value(payload, "date")),
+            "journal_id": journal.id,
+            "company_id": self.company_id.id,
+            "payment_reference": payment_ref,
+            "splendid_customer_payment_id": external_id,
+            "splendid_is_imported": True,
+        }
+
+        methods = journal.inbound_payment_method_line_ids
+        if methods:
+            vals["payment_method_line_id"] = methods[0].id
+
+        if "splendid_raw_payload" in self.env["account.payment"]._fields:
+            vals["splendid_raw_payload"] = payload
+
+        payment = self.env["account.payment"].with_company(self.company_id).sudo().create(vals)
+
+        self._set_mapping(
+            "customer_payment",
+            external_id,
+            payment,
+            payload,
+            payment_ref,
+        )
+
+        if self.auto_post_customer_payments and getattr(payment, "state", False) == "draft":
+            payment.action_post()
+
+        if self.auto_reconcile_customer_payments:
+            self._reconcile_customer_payment(payment, payload)
+
+        return payment
+    def _find_sale_invoice_for_payment_settlement(self, source_id=False, source_number=False):
+        Move = self.env["account.move"].with_company(self.company_id).sudo()
+
+        if source_id:
+            move = self._mapped_record("sale_invoice", source_id, "account.move")
+            if move:
+                return move
+
+            if "splendid_sale_invoice_id" in Move._fields:
+                move = Move.search([
+                    ("company_id", "=", self.company_id.id),
+                    ("move_type", "=", "out_invoice"),
+                    ("splendid_sale_invoice_id", "=", str(source_id)),
+                ], limit=1)
+                if move:
+                    return move
+
+        if source_number:
+            move = Move.search([
+                ("company_id", "=", self.company_id.id),
+                ("move_type", "=", "out_invoice"),
+                "|",
+                ("ref", "=", source_number),
+                ("name", "=", source_number),
+            ], limit=1)
+            if move:
+                return move
+
+        return Move
+
+    def _get_customer_payment_outstanding_lines(self, payment):
+        if not payment or not payment.move_id:
+            return self.env["account.move.line"]
+
+        return payment.move_id.line_ids.filtered(
+            lambda line:
+                not line.reconciled
+                and line.partner_id == payment.partner_id
+                and abs(line.amount_residual) > 0.00001
+                and line.credit > 0
+        )
+
+    def _reconcile_customer_payment(self, payment, payload):
+        if not payment:
+            return False
+
+        if getattr(payment, "state", False) == "draft":
+            payment.action_post()
+
+        if not payment.move_id:
+            return False
+
+        settlement_lines = []
+        settlement_lines += self._find_value(payload, "customerPaymentSettlementDetails", default=[]) or []
+        settlement_lines += self._find_value(payload, "customerSingleSettledEntryItems", default=[]) or []
+
+        invoice_moves = self.env["account.move"].with_company(self.company_id).sudo()
+
+        for item in settlement_lines:
+            if not isinstance(item, dict):
+                continue
+
+            if str(self._find_value(item, "source", default="")).lower() != "saleinvoice":
+                continue
+
+            source_id = self._find_value(item, "sourceId")
+            source_number = self._find_value(item, "sourceNumber", "number")
+
+            invoice = self._find_sale_invoice_for_payment_settlement(
+                source_id=source_id,
+                source_number=source_number,
+            )
+
+            if invoice:
+                invoice_moves |= invoice
+
+        if not invoice_moves:
+            self._log(
+                "customer_payments",
+                "error",
+                "Payment imported but matching sale invoice was not found. Check sale_invoice mapping/splendid_sale_invoice_id.",
+                payload,
+                self._external_id(payload),
+                payment,
+            )
+            return False
+
+        for invoice in invoice_moves:
+            if invoice.state == "draft":
+                invoice.action_post()
+
+        outstanding_lines = self._get_customer_payment_outstanding_lines(payment)
+
+        if not outstanding_lines:
+            self._log(
+                "customer_payments",
+                "error",
+                "Payment posted but no outstanding payment line found to assign on invoice.",
+                payload,
+                self._external_id(payload),
+                payment,
+            )
+            return False
+
+        for invoice in invoice_moves:
+            if invoice.payment_state == "paid":
+                continue
+
+            # Prefer same partner lines.
+            lines = outstanding_lines.filtered(lambda l: l.partner_id == invoice.partner_id)
+            if not lines:
+                lines = outstanding_lines
+
+            for line in lines:
+                if invoice.payment_state == "paid":
+                    break
+
+                try:
+                    invoice.js_assign_outstanding_line(line.id)
+                except Exception as exc:
+                    _logger.warning(
+                        "Could not assign Splendid payment %s to invoice %s using line %s: %s",
+                        payment.display_name,
+                        invoice.display_name,
+                        line.id,
+                        exc,
+                    )
+
+        if any(inv.payment_state != "paid" for inv in invoice_moves):
+            self._log(
+                "customer_payments",
+                "error",
+                "Payment imported but invoice is still not fully paid. Check amount, partner, currency, and residual.",
+                payload,
+                self._external_id(payload),
+                payment,
+            )
+
+    def _reconcile_moves(self, moves):
+        if not moves:
+            return False
+
+        lines = moves.mapped("line_ids").filtered(
+            lambda l:
+                not l.reconciled
+                and not l.blocked
+                and l.account_id.account_type == "asset_receivable"
+                and abs(l.amount_residual) > 0.00001
+        )
+
+        for account in lines.mapped("account_id"):
+            account_lines = lines.filtered(lambda l, acc=account: l.account_id == acc)
+            debit_lines = account_lines.filtered(lambda l: l.amount_residual > 0)
+            credit_lines = account_lines.filtered(lambda l: l.amount_residual < 0)
+
+            if debit_lines and credit_lines:
+                try:
+                    account_lines.reconcile()
+                except Exception as exc:
+                    _logger.warning("Could not reconcile Splendid receivable lines: %s", exc)
+
+        return True
