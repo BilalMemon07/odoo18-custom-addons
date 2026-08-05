@@ -2005,3 +2005,954 @@ class SplendidAccountConnection(models.Model):
                     _logger.warning("Could not reconcile Splendid receivable lines: %s", exc)
 
         return True
+
+
+    # -------------------------------------------------------------------------
+    # Purchase process sync: Splendid purchase invoices -> Vendor Bills,
+    # Receipts, Purchase Returns, Vendor Credit Notes and Vendor Payments.
+    # -------------------------------------------------------------------------
+
+    purchase_journal_id = fields.Many2one("account.journal", domain="[('type','=','purchase'), ('company_id','=',company_id)]")
+    auto_post_purchase_bills = fields.Boolean(string="Post Vendor Bills / Debit Notes", default=True)
+    auto_create_purchase_receipts = fields.Boolean(string="Create Purchase Receipts", default=True)
+    auto_validate_purchase_receipts = fields.Boolean(string="Validate Purchase Receipts", default=False)
+    auto_create_purchase_return_transfers = fields.Boolean(string="Create Purchase Return Transfers", default=True)
+    auto_validate_purchase_return_transfers = fields.Boolean(string="Validate Purchase Return Transfers", default=False)
+    auto_post_vendor_payments = fields.Boolean(string="Post Vendor Payments", default=True)
+    auto_reconcile_vendor_payments = fields.Boolean(string="Reconcile Vendor Payments", default=True)
+
+    last_purchase_process_sync = fields.Datetime(copy=False, string="Last Purchase Process Sync")
+    last_purchase_invoices_sync = fields.Datetime(copy=False, string="Last Purchase Invoices Sync")
+    last_purchase_returns_sync = fields.Datetime(copy=False, string="Last Purchase Returns Sync")
+    last_vendor_payments_sync = fields.Datetime(copy=False, string="Last Vendor Payments Sync")
+
+    purchase_invoices_fetched_count = fields.Integer(copy=False, readonly=True)
+    purchase_invoices_imported_count = fields.Integer(copy=False, readonly=True)
+    purchase_invoices_failed_count = fields.Integer(copy=False, readonly=True)
+    purchase_returns_fetched_count = fields.Integer(copy=False, readonly=True)
+    purchase_returns_imported_count = fields.Integer(copy=False, readonly=True)
+    purchase_returns_failed_count = fields.Integer(copy=False, readonly=True)
+    vendor_payments_fetched_count = fields.Integer(copy=False, readonly=True)
+    vendor_payments_imported_count = fields.Integer(copy=False, readonly=True)
+    vendor_payments_failed_count = fields.Integer(copy=False, readonly=True)
+
+    def action_sync_purchase_process(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_purchase_process()
+        return True
+
+    def action_sync_purchase_invoices(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_purchase_invoices()
+        return True
+
+    def action_sync_purchase_returns(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_purchase_returns()
+        return True
+
+    def action_sync_vendor_payments(self):
+        for rec in self:
+            rec = rec._with_target_company()
+            rec._sync_vendor_payments()
+        return True
+
+    def _default_purchase_journal(self):
+        self.ensure_one()
+        journal = self.purchase_journal_id
+        if not journal:
+            journal = self.env["account.journal"].with_company(self.company_id).sudo().search([
+                ("company_id", "=", self.company_id.id),
+                ("type", "=", "purchase"),
+            ], limit=1)
+        if not journal:
+            raise UserError(_("Please configure a Purchase Journal for Splendid purchase sync."))
+        return journal
+
+    def _date_in_connection_range(self, value):
+        date_value = self._parse_date(value) if value else False
+        if not date_value:
+            return True
+        if self.sync_from_date and date_value < self.sync_from_date:
+            return False
+        if self.sync_to_date and date_value > self.sync_to_date:
+            return False
+        return True
+
+    def _filter_rows_by_date_range(self, rows):
+        if not (self.sync_from_date or self.sync_to_date):
+            return rows
+        return [row for row in rows if self._date_in_connection_range(self._find_value(row, "date"))]
+
+    def _payload_in_sync_date_range(self, payload, date_field="date"):
+        self.ensure_one()
+
+        if not self.sync_from_date and not self.sync_to_date:
+            return True
+
+        payload_date = self._find_value(payload, date_field)
+        if not payload_date:
+            return True
+
+        payload_date = self._parse_date(payload_date)
+
+        if self.sync_from_date and payload_date < self.sync_from_date:
+            return False
+
+        if self.sync_to_date and payload_date > self.sync_to_date:
+            return False
+
+        return True
+
+
+    def _fetch_purchase_list(self, key):
+        self.ensure_one()
+
+        endpoints = {
+            "purchase_invoices": "/PurchaseInvoices",
+            "purchase_returns": "/PurchaseReturns",
+            "vendor_payments": "/VendorPayments",
+        }
+
+        endpoint = endpoints[key]
+
+        params = {
+            "orderBy": "Date",
+            "ascending": "true",
+        }
+
+        # PurchaseInvoices API me page/size required hain.
+        if key == "purchase_invoices":
+            params.update({
+                "page": 1,
+                "size": 150,
+            })
+
+            rows = self._fetch_collection(
+                endpoint,
+                params=params,
+                use_paging=False,
+            )
+        else:
+            rows = self._fetch_collection(
+                endpoint,
+                params=params,
+                use_paging=True,
+            )
+
+        # From Date / To Date filter Odoo side par.
+        rows = [
+            row for row in rows
+            if self._payload_in_sync_date_range(row, "date")
+        ]
+
+        return rows
+    def _sync_purchase_process(self):
+        self.ensure_one()
+        self._sync_purchase_invoices()
+        self._sync_purchase_returns()
+        self._sync_vendor_payments()
+        self.last_purchase_process_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_purchase_invoices(self):
+        self.ensure_one()
+        rows = self._fetch_purchase_list("purchase_invoices")
+        imported = failed = 0
+        for row in rows:
+            external_id = self._external_id(row)
+            try:
+                payload = self._fetch_detail_by_id("/PurchaseInvoices", external_id)
+                record = self._import_purchase_invoice_process(payload)
+                imported += 1
+                self._log("purchase_invoices", "success", "Purchase invoice imported/updated as vendor bill", payload, external_id, record)
+                self._sync_vendor_payments_from_purchase_invoice(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid purchase invoice %s", external_id)
+                self._log("purchase_invoices", "error", str(exc), row, external_id)
+        self._set_count("purchase_invoices", len(rows), imported, failed)
+        self.last_purchase_invoices_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_purchase_returns(self):
+        self.ensure_one()
+        rows = self._fetch_purchase_list("purchase_returns")
+        imported = failed = 0
+        for row in rows:
+            external_id = self._external_id(row)
+            try:
+                payload = self._fetch_detail_by_id("/PurchaseReturns", external_id)
+                record = self._import_purchase_return_process(payload)
+                imported += 1
+                self._log("purchase_returns", "success", "Purchase return imported/updated", payload, external_id, record)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid purchase return %s", external_id)
+                self._log("purchase_returns", "error", str(exc), row, external_id)
+        self._set_count("purchase_returns", len(rows), imported, failed)
+        self.last_purchase_returns_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_vendor_payments(self):
+        self.ensure_one()
+        rows = self._fetch_purchase_list("vendor_payments")
+        imported = failed = 0
+        for row in rows:
+            external_id = self._external_id(row)
+            try:
+                payload = self._fetch_detail_by_id("/VendorPayments", external_id)
+                record = self._import_vendor_payment_process(payload)
+                imported += 1
+                self._log("vendor_payments", "success", "Vendor payment imported/updated", payload, external_id, record)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                _logger.exception("Failed to import Splendid vendor payment %s", external_id)
+                self._log("vendor_payments", "error", str(exc), row, external_id)
+        self._set_count("vendor_payments", len(rows), imported, failed)
+        self.last_vendor_payments_sync = fields.Datetime.now()
+        self.env.cr.commit()
+        return True
+
+    def _sync_vendor_payments_from_purchase_invoice(self, invoice_payload):
+        for item in self._find_value(invoice_payload, "vendorSingleSettledEntryItems", default=[]) or []:
+            if not isinstance(item, dict):
+                continue
+            if str(self._find_value(item, "source", default="")).lower() != "vendorpayment":
+                continue
+            payment_id = self._find_value(item, "sourceId")
+            if not payment_id:
+                continue
+            try:
+                payment_payload = self._fetch_detail_by_id("/VendorPayments", payment_id)
+                payment = self._import_vendor_payment_process(payment_payload)
+                self._log("vendor_payments", "success", "Vendor payment imported from purchase invoice settlement", payment_payload, payment_id, payment)
+            except Exception as exc:  # pylint: disable=broad-except
+                self._log("vendor_payments", "error", str(exc), item, payment_id)
+
+    def _resolve_vendor(self, payload):
+        external_id = self._find_value(payload, "vendorId")
+        partner = self._mapped_record("vendor", external_id, "res.partner") if external_id else self.env["res.partner"]
+        if partner:
+            return partner
+        nested = self._nested(payload, "vendor")
+        if nested:
+            return self._import_partner(nested, "vendor")
+        raise UserError(_("Vendor could not be resolved for Splendid record %s") % self._external_id(payload))
+
+    def _purchase_invoice_details(self, payload):
+        details = self._find_value(payload, "purchaseInvoiceDetails", default=[]) or []
+        return details if isinstance(details, list) else []
+
+    def _purchase_return_details(self, payload):
+        details = self._find_value(payload, "purchaseReturnDetails", default=[]) or []
+        return details if isinstance(details, list) else []
+
+    def _vendor_location(self):
+        loc = self.env.ref("stock.stock_location_suppliers", raise_if_not_found=False)
+        if not loc:
+            loc = self.env["stock.location"].sudo().search([("usage", "=", "supplier")], limit=1)
+        if not loc:
+            raise UserError(_("Vendor stock location was not found."))
+        return loc
+
+    def _resolve_purchase_line_account(self, line, product_tmpl):
+        product_payload = self._nested(line, "product")
+        account_candidates = [
+            self._find_value(product_payload, "expenseAccountId"),
+            self._find_value(product_payload, "inventoryAccountId"),
+            self._find_value(line, "accountId"),
+        ]
+        account_code = self._find_value(self._nested(line, "account"), "code")
+        for account_id in account_candidates:
+            account = self._resolve_account(account_id, account_code if account_id == self._find_value(line, "accountId") else False)
+            if account and account.account_type not in ("income", "income_other", "asset_receivable", "liability_payable"):
+                return account
+        if product_tmpl:
+            product = product_tmpl.product_variant_id
+            account = product.property_account_expense_id or product.categ_id.property_account_expense_categ_id
+            if account:
+                return account
+        account = self.default_expense_account_id or self._default_account("expense")
+        if not account:
+            raise UserError(_("No expense account found/configured for Splendid purchase line."))
+        return account
+
+    def _vendor_bill_line_vals_from_purchase_line(self, line, move_type="in_invoice", purchase_line=False):
+        product_tmpl = self._resolve_product_from_line(line)
+        product = product_tmpl.product_variant_id
+        taxes = self._resolve_taxes_from_line(line, "purchase")
+        account = self._resolve_purchase_line_account(line, product_tmpl)
+        vals = {
+            "product_id": product.id,
+            "name": self._find_value(line, "description") or product.display_name,
+            "quantity": self._safe_float(self._find_value(line, "quantity"), 1.0),
+            "price_unit": self._safe_float(self._find_value(line, "price", "tagPrice"), 0.0),
+            "discount": self._line_discount_percent(line),
+            "account_id": account.id,
+        }
+        if taxes:
+            vals["tax_ids"] = [(6, 0, taxes.ids)]
+        if purchase_line and "purchase_line_id" in self.env["account.move.line"]._fields:
+            vals["purchase_line_id"] = purchase_line.id
+        return vals
+
+    def _purchase_order_line_vals_from_invoice_line(self, line):
+        product_tmpl = self._resolve_product_from_line(line)
+        product = product_tmpl.product_variant_id
+        taxes = self._resolve_taxes_from_line(line, "purchase")
+        PurchaseLine = self.env["purchase.order.line"]
+        vals = {
+            "product_id": product.id,
+            "name": self._find_value(line, "description") or product.display_name,
+            "product_qty": self._safe_float(self._find_value(line, "quantity"), 1.0),
+            "price_unit": self._safe_float(self._find_value(line, "price", "tagPrice"), 0.0),
+            "product_uom": (product.uom_po_id or product.uom_id).id,
+            "date_planned": self._parse_datetime(self._find_value(line, "date") or fields.Datetime.now()),
+        }
+        if "discount" in PurchaseLine._fields:
+            vals["discount"] = self._line_discount_percent(line)
+        if taxes and "taxes_id" in PurchaseLine._fields:
+            vals["taxes_id"] = [(6, 0, taxes.ids)]
+        return vals
+
+    def _prepare_purchase_order(self, payload):
+        self.ensure_one()
+        external_id = self._external_id(payload)
+        order = self._mapped_record("purchase_invoice_order", external_id, "purchase.order")
+        if order:
+            if order.state in ("draft", "sent", "to approve"):
+                order.button_confirm()
+            self._mark_purchase_receipts_from_order(order, payload)
+            return order
+
+        partner = self._resolve_vendor(payload)
+        details = self._purchase_invoice_details(payload)
+        if not details:
+            raise UserError(_("No purchase invoice lines found for Splendid purchase invoice %s") % external_id)
+
+        first_warehouse = self._resolve_warehouse(details[0]) if details else False
+        order_vals = {
+            "partner_id": partner.id,
+            "date_order": self._parse_datetime(self._find_value(payload, "date")),
+            "origin": self._find_value(payload, "number") or external_id,
+            "company_id": self.company_id.id,
+            "order_line": [(0, 0, self._purchase_order_line_vals_from_invoice_line(line)) for line in details],
+        }
+        if "partner_ref" in self.env["purchase.order"]._fields:
+            order_vals["partner_ref"] = self._find_value(payload, "number", "reference", "paymentReference") or external_id
+        if "picking_type_id" in self.env["purchase.order"]._fields and first_warehouse and first_warehouse.in_type_id:
+            order_vals["picking_type_id"] = first_warehouse.in_type_id.id
+        if "splendid_purchase_invoice_id" in self.env["purchase.order"]._fields:
+            order_vals["splendid_purchase_invoice_id"] = external_id
+        if "splendid_purchase_invoice_number" in self.env["purchase.order"]._fields:
+            order_vals["splendid_purchase_invoice_number"] = self._find_value(payload, "number")
+        if "splendid_is_imported" in self.env["purchase.order"]._fields:
+            order_vals["splendid_is_imported"] = True
+        if "splendid_raw_payload" in self.env["purchase.order"]._fields:
+            order_vals["splendid_raw_payload"] = payload
+
+        order = self.env["purchase.order"].with_company(self.company_id).sudo().create(order_vals)
+        self._set_mapping("purchase_invoice_order", external_id, order, payload, order.name)
+
+        if order.state in ("draft", "sent", "to approve"):
+            order.button_confirm()
+
+        self._mark_purchase_receipts_from_order(order, payload)
+        return order
+
+    def _mark_purchase_receipts_from_order(self, order, payload):
+        self.ensure_one()
+        external_id = self._external_id(payload)
+        pickings = order.picking_ids.filtered(lambda p: p.state != "cancel") if "picking_ids" in order._fields else self.env["stock.picking"]
+        for picking in pickings:
+            vals = {
+                "splendid_purchase_invoice_id": external_id,
+                "splendid_source_model": "purchase_invoice_receipt",
+                "splendid_is_imported": True,
+            }
+            if "splendid_raw_payload" in picking._fields:
+                vals["splendid_raw_payload"] = payload
+            picking.sudo().write(vals)
+            self._set_mapping("purchase_invoice_receipt", "%s_%s" % (external_id, picking.id), picking, payload, picking.name)
+            if self.auto_validate_purchase_receipts:
+                self._validate_picking(picking)
+        return pickings
+
+    def _get_or_create_purchase_adjustment_product(self, name, default_code):
+        self.ensure_one()
+        Product = self.env["product.template"].with_company(self.company_id).sudo()
+        domain = ["|", ("default_code", "=", default_code), ("name", "=", name)]
+        if "company_id" in Product._fields:
+            domain = ["&", "|", ("company_id", "=", False), ("company_id", "=", self.company_id.id)] + domain
+        product_tmpl = Product.search(domain, limit=1)
+        vals = {}
+        if "sale_ok" in Product._fields:
+            vals["sale_ok"] = False
+        if "purchase_ok" in Product._fields:
+            vals["purchase_ok"] = True
+        if "type" in Product._fields:
+            vals["type"] = "service"
+        if "detailed_type" in Product._fields:
+            vals["detailed_type"] = "service"
+        expense_account = self.default_expense_account_id or self._default_account("expense")
+        if expense_account and "property_account_expense_id" in Product._fields:
+            vals["property_account_expense_id"] = expense_account.id
+        if product_tmpl:
+            if vals:
+                product_tmpl.write(vals)
+            return product_tmpl
+        vals.update({
+            "name": name,
+            "default_code": default_code,
+            "list_price": 0.0,
+            "standard_price": 0.0,
+        })
+        if "company_id" in Product._fields:
+            vals["company_id"] = self.company_id.id
+        return Product.create(vals)
+
+    def _purchase_adjustment_line_cmd(self, payload, field_name, name, default_code, sign=1.0):
+        self.ensure_one()
+        amount = self._safe_float(self._find_value(payload, field_name), 0.0)
+        if amount <= 0:
+            return False
+        product_tmpl = self._get_or_create_purchase_adjustment_product(name, default_code)
+        product = product_tmpl.product_variant_id
+        account = (
+            product.property_account_expense_id
+            or product.categ_id.property_account_expense_categ_id
+            or self.default_expense_account_id
+            or self._default_account("expense")
+        )
+        if not account:
+            raise UserError(_("Expense account is required for %s product.") % name)
+        return (0, 0, {
+            "product_id": product.id,
+            "name": name,
+            "quantity": 1.0,
+            "price_unit": amount * sign,
+            "discount": 0.0,
+            "account_id": account.id,
+            "tax_ids": [(6, 0, [])],
+        })
+
+    def _purchase_discount_line_cmd(self, payload):
+        return self._purchase_adjustment_line_cmd(payload, "discountAmount", "Purchase Discount", "PURCHASE_DISCOUNT", sign=-1.0)
+
+    def _purchase_tax_amount_line_cmd(self, payload):
+        return self._purchase_adjustment_line_cmd(payload, "taxAmount", "Purchase Tax Amount", "PURCHASE_TAX_AMOUNT", sign=1.0)
+
+    def _purchase_auto_roundoff_line_cmd(self, payload):
+        amount = self._safe_float(self._find_value(payload, "autoRoundOff"), 0.0)
+        if abs(amount) <= 0.00001:
+            return False
+        product_tmpl = self._get_or_create_purchase_adjustment_product("Purchase Round Off", "PURCHASE_ROUND_OFF")
+        product = product_tmpl.product_variant_id
+        account = product.property_account_expense_id or product.categ_id.property_account_expense_categ_id or self.default_expense_account_id or self._default_account("expense")
+        if not account:
+            raise UserError(_("Expense account is required for Purchase Round Off product."))
+        return (0, 0, {
+            "product_id": product.id,
+            "name": "Purchase Round Off",
+            "quantity": 1.0,
+            "price_unit": amount,
+            "discount": 0.0,
+            "account_id": account.id,
+            "tax_ids": [(6, 0, [])],
+        })
+
+    def _import_purchase_invoice_process(self, payload):
+        external_id = self._external_id(payload)
+
+        purchase_order = self._prepare_purchase_order(payload)
+
+        existing_bill = self._mapped_record("purchase_invoice", external_id, "account.move")
+        if existing_bill:
+            if self.auto_post_purchase_bills and existing_bill.state == "draft":
+                existing_bill.action_post()
+            if self.auto_create_purchase_receipts:
+                self._mark_purchase_receipts_from_order(purchase_order, payload)
+            return existing_bill
+
+        details = self._purchase_invoice_details(payload)
+        if not details:
+            raise UserError(_("No purchase invoice lines found for Splendid purchase invoice %s") % external_id)
+
+        purchase_lines = purchase_order.order_line.filtered(lambda line: not line.display_type)
+
+        invoice_lines = []
+        for index, line in enumerate(details):
+            purchase_line = purchase_lines[index] if index < len(purchase_lines) else False
+            invoice_lines.append((0, 0, self._vendor_bill_line_vals_from_purchase_line(
+                line,
+                move_type="in_invoice",
+                purchase_line=purchase_line,
+            )))
+
+        discount_line = self._purchase_discount_line_cmd(payload)
+        if discount_line:
+            invoice_lines.append(discount_line)
+        tax_line = self._purchase_tax_amount_line_cmd(payload)
+        if tax_line:
+            invoice_lines.append(tax_line)
+        round_line = self._purchase_auto_roundoff_line_cmd(payload)
+        if round_line:
+            invoice_lines.append(round_line)
+
+        move_vals = {
+            "move_type": "in_invoice",
+            "partner_id": purchase_order.partner_id.id,
+            "invoice_date": self._parse_date(self._find_value(payload, "date")),
+            "invoice_date_due": self._parse_date(self._find_value(payload, "dueDate")) if self._find_value(payload, "dueDate") else False,
+            "journal_id": self._default_purchase_journal().id,
+            "ref": self._find_value(payload, "number", "reference", "paymentReference") or external_id,
+            "invoice_origin": purchase_order.name,
+            "invoice_line_ids": invoice_lines,
+            "company_id": self.company_id.id,
+            "splendid_purchase_invoice_id": external_id,
+            "splendid_source_model": "purchase_invoice",
+            "splendid_is_imported": True,
+        }
+        if "splendid_raw_payload" in self.env["account.move"]._fields:
+            move_vals["splendid_raw_payload"] = payload
+
+        bill = self.env["account.move"].with_company(self.company_id).sudo().with_context(default_move_type="in_invoice").create(move_vals)
+        self._set_mapping("purchase_invoice", external_id, bill, payload, move_vals["ref"])
+
+        if self.auto_post_purchase_bills and bill.state == "draft":
+            bill.action_post()
+
+        if self.auto_create_purchase_receipts:
+            self._mark_purchase_receipts_from_order(purchase_order, payload)
+
+        return bill
+
+    def _create_purchase_receipt_from_invoice(self, payload):
+        # Backward-compatible wrapper. Receipts must come from the Purchase Order,
+        # not from a standalone stock picking, so receiving remains manageable in Odoo.
+        order = self._prepare_purchase_order(payload)
+        return self._mark_purchase_receipts_from_order(order, payload)
+
+    def _get_original_purchase_bills(self, payload):
+        moves = self.env["account.move"].with_company(self.company_id).sudo()
+        settlement_lines = self._find_value(payload, "purchaseReturnSettlementDetails", default=[]) or []
+        settlement_lines += self._find_value(payload, "vendorSingleSettledEntryItems", default=[]) or []
+        for item in settlement_lines:
+            if not isinstance(item, dict):
+                continue
+            if str(self._find_value(item, "source", default="")).lower() != "purchaseinvoice":
+                continue
+            source_id = self._find_value(item, "sourceId")
+            source_number = self._find_value(item, "sourceNumber", "number")
+            move = self._find_purchase_invoice_for_payment_settlement(source_id=source_id, source_number=source_number)
+            if move:
+                moves |= move
+        source_id = self._find_value(payload, "purchaseInvoiceId")
+        if source_id:
+            move = self._find_purchase_invoice_for_payment_settlement(source_id=source_id)
+            if move:
+                moves |= move
+        return moves
+
+    def _import_purchase_return_process(self, payload):
+        external_id = self._external_id(payload)
+        debit_note = self._mapped_record("purchase_return", external_id, "account.move")
+        if not debit_note:
+            debit_note = self._create_purchase_return_credit_note(payload)
+        if self.auto_create_purchase_return_transfers:
+            self._create_purchase_return_transfer(payload)
+        return debit_note
+
+    def _create_purchase_return_credit_note(self, payload):
+        external_id = self._external_id(payload)
+        partner = self._resolve_vendor(payload)
+        original_bills = self._get_original_purchase_bills(payload)
+        invoice_lines = []
+        for line in self._purchase_return_details(payload):
+            invoice_lines.append((0, 0, self._vendor_bill_line_vals_from_purchase_line(line, move_type="in_refund")))
+        if not invoice_lines:
+            raise UserError(_("No purchase return lines found for Splendid purchase return %s") % external_id)
+
+        discount_line = self._purchase_discount_line_cmd(payload)
+        if discount_line:
+            invoice_lines.append(discount_line)
+        tax_line = self._purchase_tax_amount_line_cmd(payload)
+        if tax_line:
+            invoice_lines.append(tax_line)
+
+        vals = {
+            "move_type": "in_refund",
+            "partner_id": partner.id,
+            "invoice_date": self._parse_date(self._find_value(payload, "date")),
+            "journal_id": self._default_purchase_journal().id,
+            "invoice_origin": ", ".join(original_bills.mapped("name")) if original_bills else self._find_value(payload, "purchaseInvoiceNumber"),
+            "ref": self._find_value(payload, "number", "reference") or external_id,
+            "invoice_line_ids": invoice_lines,
+            "company_id": self.company_id.id,
+            "splendid_purchase_return_id": external_id,
+            "splendid_source_model": "purchase_return",
+            "splendid_is_imported": True,
+        }
+        if original_bills and len(original_bills) == 1 and "reversed_entry_id" in self.env["account.move"]._fields:
+            vals["reversed_entry_id"] = original_bills.id
+        if "splendid_raw_payload" in self.env["account.move"]._fields:
+            vals["splendid_raw_payload"] = payload
+        debit_note = self.env["account.move"].with_company(self.company_id).sudo().with_context(default_move_type="in_refund").create(vals)
+        self._set_mapping("purchase_return", external_id, debit_note, payload, vals["ref"])
+        if self.auto_post_purchase_bills and debit_note.state == "draft":
+            debit_note.action_post()
+        if original_bills and debit_note.state == "posted" and self.auto_reconcile_vendor_payments:
+            self._reconcile_moves(original_bills | debit_note)
+        return debit_note
+
+    def _create_purchase_return_transfer(self, payload):
+        external_id = self._external_id(payload)
+        existing = self._mapped_record("purchase_return_transfer", external_id, "stock.picking")
+        if existing:
+            return existing
+        details = self._purchase_return_details(payload)
+        if not details:
+            return self.env["stock.picking"]
+        warehouse = self._resolve_warehouse(details[0])
+        picking_type = warehouse.out_type_id or self.env["stock.picking.type"].with_company(self.company_id).sudo().search([
+            ("code", "=", "outgoing"),
+            ("company_id", "=", self.company_id.id),
+        ], limit=1)
+        source_location = warehouse.lot_stock_id
+        dest_location = self._vendor_location()
+        move_cmds = []
+        for line in details:
+            product_tmpl = self._resolve_product_from_line(line)
+            product = product_tmpl.product_variant_id
+            qty = self._safe_float(self._find_value(line, "quantity"), 0.0)
+            if qty <= 0:
+                continue
+            move_cmds.append((0, 0, {
+                "name": self._find_value(line, "description") or product.display_name,
+                "product_id": product.id,
+                "product_uom_qty": qty,
+                "product_uom": product.uom_id.id,
+                "location_id": source_location.id,
+                "location_dest_id": dest_location.id,
+                "company_id": self.company_id.id,
+            }))
+        if not move_cmds:
+            return self.env["stock.picking"]
+        picking_vals = {
+            "picking_type_id": picking_type.id,
+            "partner_id": self._resolve_vendor(payload).id,
+            "location_id": source_location.id,
+            "location_dest_id": dest_location.id,
+            "origin": self._find_value(payload, "number") or external_id,
+            "scheduled_date": self._parse_datetime(self._find_value(payload, "date")),
+            "company_id": self.company_id.id,
+            "move_ids": move_cmds,
+            "splendid_purchase_return_id": external_id,
+            "splendid_source_model": "purchase_return_transfer",
+            "splendid_is_imported": True,
+        }
+        if "splendid_raw_payload" in self.env["stock.picking"]._fields:
+            picking_vals["splendid_raw_payload"] = payload
+        picking = self.env["stock.picking"].with_company(self.company_id).sudo().create(picking_vals)
+        self._set_mapping("purchase_return_transfer", external_id, picking, payload, picking.name)
+        if picking.state == "draft":
+            picking.action_confirm()
+        if self.auto_validate_purchase_return_transfers:
+            self._validate_picking(picking)
+        return picking
+
+    def _resolve_journal_for_vendor_payment(self, payload):
+        account_id = False
+        account_code = False
+        for line in self._find_value(payload, "vendorPaymentDetails", default=[]) or []:
+            if isinstance(line, dict):
+                account_id = self._find_value(line, "accountId")
+                account_code = self._find_value(self._nested(line, "account"), "code")
+                break
+        account = self._resolve_account(account_id, account_code)
+        Journal = self.env["account.journal"].with_company(self.company_id).sudo()
+        if account:
+            journal = Journal.search([
+                ("company_id", "=", self.company_id.id),
+                ("type", "in", ("bank", "cash")),
+                ("default_account_id", "=", account.id),
+            ], limit=1)
+            if journal:
+                return journal
+            journal = Journal.search([
+                ("company_id", "=", self.company_id.id),
+                ("splendid_bank_account_account_id", "=", str(account_id or "")),
+            ], limit=1)
+            if journal:
+                return journal
+        return self._default_bank_journal()
+
+    def _import_vendor_payment_process(self, payload):
+        external_id = self._external_id(payload)
+        payment = self._mapped_record("vendor_payment", external_id, "account.payment")
+        if payment:
+            if self.auto_post_vendor_payments and getattr(payment, "state", False) == "draft":
+                payment.action_post()
+            if self.auto_reconcile_vendor_payments:
+                self._reconcile_vendor_payment(payment, payload)
+            return payment
+
+        partner = self._resolve_vendor(payload)
+        journal = self._resolve_journal_for_vendor_payment(payload)
+        amount = self._safe_float(self._find_value(payload, "totalAmount", "allocatedAmount", "amount"), 0.0)
+        payment_ref = self._find_value(payload, "number", "reference", "comments") or external_id
+        vals = {
+            "payment_type": "outbound",
+            "partner_type": "supplier",
+            "partner_id": partner.id,
+            "amount": amount,
+            "date": self._parse_date(self._find_value(payload, "date")),
+            "journal_id": journal.id,
+            "company_id": self.company_id.id,
+            "payment_reference": payment_ref,
+            "splendid_vendor_payment_id": external_id,
+            "splendid_is_imported": True,
+        }
+        methods = journal.outbound_payment_method_line_ids
+        if methods:
+            vals["payment_method_line_id"] = methods[0].id
+        if "splendid_raw_payload" in self.env["account.payment"]._fields:
+            vals["splendid_raw_payload"] = payload
+        payment = self.env["account.payment"].with_company(self.company_id).sudo().create(vals)
+        self._set_mapping("vendor_payment", external_id, payment, payload, payment_ref)
+        if self.auto_post_vendor_payments and getattr(payment, "state", False) == "draft":
+            payment.action_post()
+        if self.auto_reconcile_vendor_payments:
+            self._reconcile_vendor_payment(payment, payload)
+        return payment
+
+    def _find_purchase_invoice_for_payment_settlement(self, source_id=False, source_number=False):
+        Move = self.env["account.move"].with_company(self.company_id).sudo()
+
+        if source_id:
+            bill = self._mapped_record("purchase_invoice", source_id, "account.move")
+            if bill:
+                return bill
+
+            if "splendid_purchase_invoice_id" in Move._fields:
+                bill = Move.search([
+                    ("company_id", "=", self.company_id.id),
+                    ("move_type", "=", "in_invoice"),
+                    ("splendid_purchase_invoice_id", "=", str(source_id)),
+                ], limit=1)
+                if bill:
+                    return bill
+
+        if source_number:
+            bill = Move.search([
+                ("company_id", "=", self.company_id.id),
+                ("move_type", "=", "in_invoice"),
+                "|",
+                "|",
+                ("ref", "=", source_number),
+                ("name", "=", source_number),
+                ("invoice_origin", "=", source_number),
+            ], limit=1)
+            if bill:
+                return bill
+
+        return Move
+
+    def _ensure_purchase_invoice_for_payment_settlement(self, source_id=False, source_number=False):
+        self.ensure_one()
+
+        bill = self._find_purchase_invoice_for_payment_settlement(
+            source_id=source_id,
+            source_number=source_number,
+        )
+        if bill:
+            return bill
+
+        # Agar payment settlement me purchase invoice sourceId hai,
+        # lekin woh bill date range / previous sync ki wajah se import nahi hui,
+        # to direct PurchaseInvoices/{id} call karke bill create karo.
+        if source_id:
+            try:
+                payload = self._fetch_detail_by_id("/PurchaseInvoices", source_id)
+                if payload and self._purchase_invoice_details(payload):
+                    bill = self._import_purchase_invoice_process(payload)
+                    return bill
+            except Exception as exc:  # pylint: disable=broad-except
+                self._log(
+                    "vendor_payments",
+                    "error",
+                    "Could not auto-import purchase invoice %s for vendor payment settlement: %s" % (source_id, exc),
+                    {"source_id": source_id, "source_number": source_number},
+                    source_id,
+                )
+
+        return self.env["account.move"].with_company(self.company_id).sudo()
+
+    def _get_vendor_payment_outstanding_lines(self, payment):
+        if not payment or not payment.move_id:
+            return self.env["account.move.line"]
+        return payment.move_id.line_ids.filtered(
+            lambda line:
+                not line.reconciled
+                and line.partner_id == payment.partner_id
+                and abs(line.amount_residual) > 0.00001
+                and line.debit > 0
+        )
+
+
+    def _reconcile_vendor_payment(self, payment, payload):
+        if not payment:
+            return False
+
+        if getattr(payment, "state", False) == "draft":
+            payment.action_post()
+
+        if not payment.move_id:
+            return False
+
+        settlement_lines = []
+        settlement_lines += self._find_value(payload, "vendorPaymentSettlementDetails", default=[]) or []
+        settlement_lines += self._find_value(payload, "vendorSingleSettledEntryItems", default=[]) or []
+
+        bill_moves = self.env["account.move"].with_company(self.company_id).sudo()
+
+        for item in settlement_lines:
+            if not isinstance(item, dict):
+                continue
+
+            if str(self._find_value(item, "source", default="")).lower() != "purchaseinvoice":
+                continue
+
+            source_id = self._find_value(item, "sourceId")
+            source_number = self._find_value(item, "sourceNumber", "number")
+
+            bill = self._ensure_purchase_invoice_for_payment_settlement(
+                source_id=source_id,
+                source_number=source_number,
+            )
+
+            if bill:
+                bill_moves |= bill
+
+        if not bill_moves:
+            self._log(
+                "vendor_payments",
+                "error",
+                "Vendor payment imported but matching purchase invoice was not found. Settlement sourceId did not match any Odoo bill.",
+                payload,
+                self._external_id(payload),
+                payment,
+            )
+            return False
+
+        for bill in bill_moves:
+            if bill.state == "draft":
+                bill.action_post()
+
+        payment_lines_all = payment.move_id.line_ids.filtered(
+            lambda line:
+                not line.reconciled
+                and abs(line.amount_residual) > 0.00001
+                and line.account_id.account_type == "liability_payable"
+        )
+
+        if not payment_lines_all:
+            self._log(
+                "vendor_payments",
+                "error",
+                "Vendor payment posted but no payable line found on payment move. Check payment partner/payable account/payment journal configuration.",
+                payload,
+                self._external_id(payload),
+                payment,
+            )
+            return False
+
+        for bill in bill_moves:
+            if bill.payment_state == "paid":
+                continue
+
+            bill_lines = bill.line_ids.filtered(
+                lambda line:
+                    not line.reconciled
+                    and abs(line.amount_residual) > 0.00001
+                    and line.account_id.account_type == "liability_payable"
+            )
+
+            if not bill_lines:
+                continue
+
+            for account in bill_lines.mapped("account_id"):
+                bill_account_lines = bill_lines.filtered(lambda l, acc=account: l.account_id == acc)
+                payment_account_lines = payment_lines_all.filtered(lambda l, acc=account: l.account_id == acc)
+
+                if not payment_account_lines:
+                    continue
+
+                partner_bill_lines = bill_account_lines.filtered(
+                    lambda l: not l.partner_id or not payment.partner_id or l.partner_id.commercial_partner_id == payment.partner_id.commercial_partner_id
+                )
+                partner_payment_lines = payment_account_lines.filtered(
+                    lambda l: not l.partner_id or not payment.partner_id or l.partner_id.commercial_partner_id == payment.partner_id.commercial_partner_id
+                )
+
+                if partner_bill_lines and partner_payment_lines:
+                    lines_to_reconcile = partner_bill_lines | partner_payment_lines
+                else:
+                    lines_to_reconcile = bill_account_lines | payment_account_lines
+
+                try:
+                    lines_to_reconcile.reconcile()
+                except Exception as exc:  # pylint: disable=broad-except
+                    _logger.warning(
+                        "Could not reconcile Splendid vendor payment %s with bill %s on account %s: %s",
+                        payment.display_name,
+                        bill.display_name,
+                        account.display_name,
+                        exc,
+                    )
+
+        unpaid_bills = bill_moves.filtered(lambda bill: bill.payment_state != "paid")
+
+        if unpaid_bills:
+            self._log(
+                "vendor_payments",
+                "error",
+                "Vendor payment imported but bill is still not fully paid. Check amount, partner, payable account, currency, or partial settlement.",
+                payload,
+                self._external_id(payload),
+                payment,
+            )
+
+        return True
+
+   
+    def _reconcile_moves(self, moves):
+        if not moves:
+            return False
+
+        lines = moves.mapped("line_ids").filtered(
+            lambda l:
+                not l.reconciled
+                and not l.blocked
+                and l.account_id.account_type in ("asset_receivable", "liability_payable")
+                and abs(l.amount_residual) > 0.00001
+        )
+
+        for account in lines.mapped("account_id"):
+            account_lines = lines.filtered(lambda l, acc=account: l.account_id == acc)
+            debit_lines = account_lines.filtered(lambda l: l.amount_residual > 0)
+            credit_lines = account_lines.filtered(lambda l: l.amount_residual < 0)
+            if debit_lines and credit_lines:
+                try:
+                    account_lines.reconcile()
+                except Exception as exc:
+                    _logger.warning("Could not reconcile Splendid move lines: %s", exc)
+        return True
+

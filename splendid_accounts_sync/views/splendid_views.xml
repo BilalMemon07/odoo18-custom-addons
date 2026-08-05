@@ -29,6 +29,8 @@
                             confirm="This will sync Chart of Accounts, Customers, Vendors, Products, Warehouses, Bank Accounts and Taxes only."/>
                     <button name="action_sync_sales_process" type="object" string="Sync Sales Process" class="btn-secondary"
                             confirm="This will fetch sale invoices by date range, get each invoice by ID, create/confirm sale orders, create invoices, sale returns, return transfers, credit notes and customer payments."/>
+                    <button name="action_sync_purchase_process" type="object" string="Sync Purchase Process" class="btn-secondary"
+                            confirm="This will fetch purchase invoices with page=1 and size=150, get each invoice by ID, create vendor bills/receipts, purchase returns, return transfers and vendor payments."/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -58,6 +60,7 @@
                             <field name="default_expense_account_id"/>
                             <field name="default_stock_account_id"/>
                             <field name="sale_journal_id"/>
+                            <field name="purchase_journal_id"/>
                             <field name="bank_journal_id"/>
                         </group>
                     </group>
@@ -120,6 +123,40 @@
                             </group>
                         </page>
 
+
+
+                        <page string="Purchase Process Sync">
+                            <group string="Date Range">
+                                <field name="sync_from_date"/>
+                                <field name="sync_to_date"/>
+                            </group>
+                            <group string="Purchase Sync Controls">
+                                <button name="action_sync_purchase_process" type="object" string="Sync Purchase Process" class="btn-primary"/>
+                                <button name="action_sync_purchase_invoices" type="object" string="Sync Purchase Invoices / Vendor Bills" class="btn-secondary"/>
+                                <button name="action_sync_purchase_returns" type="object" string="Sync Purchase Returns" class="btn-secondary"/>
+                                <button name="action_sync_vendor_payments" type="object" string="Sync Vendor Payments" class="btn-secondary"/>
+                            </group>
+                            <group string="Purchase Options">
+                                <group>
+                                    <field name="auto_post_purchase_bills"/>
+                                    <field name="auto_create_purchase_receipts"/>
+                                    <field name="auto_validate_purchase_receipts"/>
+                                </group>
+                                <group>
+                                    <field name="auto_create_purchase_return_transfers"/>
+                                    <field name="auto_validate_purchase_return_transfers"/>
+                                    <field name="auto_post_vendor_payments"/>
+                                    <field name="auto_reconcile_vendor_payments"/>
+                                </group>
+                            </group>
+                            <group string="Last Purchase Sync Dates">
+                                <field name="last_purchase_process_sync" readonly="1"/>
+                                <field name="last_purchase_invoices_sync" readonly="1"/>
+                                <field name="last_purchase_returns_sync" readonly="1"/>
+                                <field name="last_vendor_payments_sync" readonly="1"/>
+                            </group>
+                        </page>
+
                         <page string="Sync Counts Verification">
                             <group string="Counts from Latest Sync">
                                 <group string="Chart of Accounts">
@@ -171,6 +208,21 @@
                                     <field name="customer_payments_fetched_count" readonly="1"/>
                                     <field name="customer_payments_imported_count" readonly="1"/>
                                     <field name="customer_payments_failed_count" readonly="1"/>
+                                </group>
+                                <group string="Purchase Invoices / Vendor Bills">
+                                    <field name="purchase_invoices_fetched_count" readonly="1"/>
+                                    <field name="purchase_invoices_imported_count" readonly="1"/>
+                                    <field name="purchase_invoices_failed_count" readonly="1"/>
+                                </group>
+                                <group string="Purchase Returns">
+                                    <field name="purchase_returns_fetched_count" readonly="1"/>
+                                    <field name="purchase_returns_imported_count" readonly="1"/>
+                                    <field name="purchase_returns_failed_count" readonly="1"/>
+                                </group>
+                                <group string="Vendor Payments">
+                                    <field name="vendor_payments_fetched_count" readonly="1"/>
+                                    <field name="vendor_payments_imported_count" readonly="1"/>
+                                    <field name="vendor_payments_failed_count" readonly="1"/>
                                 </group>
                             </group>
                         </page>
