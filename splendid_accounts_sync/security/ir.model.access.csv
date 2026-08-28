@@ -2,3 +2,6 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_splendid_connection_system,splendid.account.connection system,model_splendid_account_connection,base.group_system,1,1,1,1
 access_splendid_sync_map_system,splendid.sync.map system,model_splendid_sync_map,base.group_system,1,1,1,1
 access_splendid_sync_log_system,splendid.sync.log system,model_splendid_sync_log,base.group_system,1,1,1,1
+access_splendid_job_order_expense_system,splendid.job.order.expense system,model_splendid_job_order_expense,base.group_system,1,1,1,1
+access_splendid_job_order_expense_mrp_user,splendid.job.order.expense mrp user,model_splendid_job_order_expense,mrp.group_mrp_user,1,1,0,0
+access_splendid_job_order_expense_billing_user,splendid.job.order.expense billing user,model_splendid_job_order_expense,account.group_account_invoice,1,1,0,0

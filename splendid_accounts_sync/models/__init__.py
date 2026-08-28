@@ -8,8 +8,15 @@ from . import account_journal
 from . import account_tax
 from . import splendid_connection
 from . import sale_order
+from . import purchase_order
 from . import account_move
 from . import account_payment
 from . import stock_picking
 
-from . import purchase_order
+from . import mrp_production
+from . import mrp_bom
+from . import splendid_job_order_expense
+from . import mrp_workcenter
+from . import mrp_routing_workcenter
+from . import mrp_workorder
+from . import mrp_report_mo_overview

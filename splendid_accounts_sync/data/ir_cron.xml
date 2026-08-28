@@ -9,4 +9,14 @@
         <field name="interval_type">hours</field>
         <field name="active" eval="False"/>
     </record>
+
+    <record id="action_repair_splendid_vendor_bill_stock_accounts" model="ir.actions.server">
+        <field name="name">Repair Splendid Vendor Bill Stock Accounts</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_splendid_repair_purchase_bill_stock_accounts()</field>
+    </record>
+
 </odoo>

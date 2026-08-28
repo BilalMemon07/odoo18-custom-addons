@@ -31,6 +31,12 @@
                             confirm="This will fetch sale invoices by date range, get each invoice by ID, create/confirm sale orders, create invoices, sale returns, return transfers, credit notes and customer payments."/>
                     <button name="action_sync_purchase_process" type="object" string="Sync Purchase Process" class="btn-secondary"
                             confirm="This will fetch purchase invoices with page=1 and size=150, get each invoice by ID, create vendor bills/receipts, purchase returns, return transfers and vendor payments."/>
+                    <button name="action_sync_journal_entries" type="object" string="Sync Journal Entries" class="btn-secondary"
+                            confirm="This will migrate Splendid JournalEntries using the current From/To Date, GET each record by ID, map exact GL accounts, and create balanced Odoo journal entries. Posting follows the Journal Entries option."/>
+                    <button name="action_sync_expenses" type="object" string="Sync Expenses" class="btn-secondary"
+                            confirm="This will GET the Splendid Expenses list, skip status 30/void rows before detail calls, GET every remaining Expenses/{id}, and create exact balanced Odoo journal entries from the source accounts."/>
+                    <button name="action_sync_job_orders" type="object" string="Sync Job Orders" class="btn-secondary"
+                            confirm="This will fetch Splendid Job Orders, create one dedicated BoM per Job Order, create an Odoo Manufacturing Order, and import Job Order expenses as Odoo extra manufacturing cost. Component cost fields from Splendid are still ignored."/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -100,6 +106,9 @@
                                 <button name="action_sync_sale_invoices" type="object" string="Sync Sale Invoices" class="btn-secondary"/>
                                 <button name="action_sync_sale_returns" type="object" string="Sync Sale Returns" class="btn-secondary"/>
                                 <button name="action_sync_customer_payments" type="object" string="Sync Customer Payments" class="btn-secondary"/>
+                                <button name="action_sync_customer_refunds" type="object" string="Sync Customer Refunds" class="btn-secondary"/>
+                                <button name="action_reconcile_customer_settlements" type="object" string="Reconcile Customer Settlements" class="btn-secondary"
+                                        confirm="This will fetch Splendid CustomerSettlements, GET every settlement by ID, and reconcile the exact customerSettlementDetails adjustedAmount between the referenced CustomerPayment / CustomerRefund and SaleInvoice / SaleReturn records. Draft referenced documents will be posted. No write-off will be created and existing unrelated reconciliations will not be removed."/>
                             </group>
                             <group string="Sales Options">
                                 <group>
@@ -113,6 +122,8 @@
                                     <field name="auto_validate_return_transfers"/>
                                     <field name="auto_post_customer_payments"/>
                                     <field name="auto_reconcile_customer_payments"/>
+                                    <field name="auto_post_customer_refunds"/>
+                                    <field name="auto_reconcile_customer_refunds"/>
                                 </group>
                             </group>
                             <group string="Last Sales Sync Dates">
@@ -120,6 +131,7 @@
                                 <field name="last_sale_invoices_sync" readonly="1"/>
                                 <field name="last_sale_returns_sync" readonly="1"/>
                                 <field name="last_customer_payments_sync" readonly="1"/>
+                                <field name="last_customer_refunds_sync" readonly="1"/>
                             </group>
                         </page>
 
@@ -135,6 +147,8 @@
                                 <button name="action_sync_purchase_invoices" type="object" string="Sync Purchase Invoices / Vendor Bills" class="btn-secondary"/>
                                 <button name="action_sync_purchase_returns" type="object" string="Sync Purchase Returns" class="btn-secondary"/>
                                 <button name="action_sync_vendor_payments" type="object" string="Sync Vendor Payments" class="btn-secondary"/>
+                                <button name="action_reconcile_purchase_settlements" type="object" string="Reconcile Splendid Settlements" class="btn-secondary"
+                                        confirm="This will fetch Splendid VendorSettlements, GET every settlement by ID, and reconcile the exact vendorSettlementDetails adjustedAmount between the referenced VendorPayment / PurchaseReturn and PurchaseInvoice records. Draft referenced documents will be posted. No write-off will be created."/>
                             </group>
                             <group string="Purchase Options">
                                 <group>
@@ -154,6 +168,79 @@
                                 <field name="last_purchase_invoices_sync" readonly="1"/>
                                 <field name="last_purchase_returns_sync" readonly="1"/>
                                 <field name="last_vendor_payments_sync" readonly="1"/>
+                            </group>
+                        </page>
+
+                        <page string="Journal Entries Migration">
+                            <group string="Date Range">
+                                <field name="sync_from_date"/>
+                                <field name="sync_to_date"/>
+                            </group>
+                            <group string="Bulk Migration">
+                                <button name="action_sync_journal_entries" type="object" string="Sync Journal Entries" class="btn-primary"
+                                        confirm="This will GET JournalEntries, skip status 30/void rows before detail calls, then GET JournalEntries/{id} for each remaining record and create/update exact balanced Odoo journal entries. Posted Odoo entries are never silently rewritten."/>
+                                <field name="journal_entry_journal_id"/>
+                                <field name="auto_post_journal_entries"/>
+                                <field name="last_journal_entries_sync" readonly="1"/>
+                            </group>
+                            <group string="Import One Journal Entry by ID">
+                                <field name="journal_entry_external_id" placeholder="e.g. 1103816"/>
+                                <button name="action_sync_journal_entry_by_id" type="object" string="GET /JournalEntries/{id} and Import" class="btn-secondary"/>
+                            </group>
+                            <group string="Latest Journal Entry Sync Counts">
+                                <field name="journal_entries_fetched_count" readonly="1"/>
+                                <field name="journal_entries_imported_count" readonly="1"/>
+                                <field name="journal_entries_failed_count" readonly="1"/>
+                            </group>
+                            <group string="Accounting Safety">
+                                <separator string="Every journalEntryDetails line uses the exact Splendid accountId/account code. Missing accounts are fetched from Splendid Accounts; no fallback GL account is guessed. The entry must balance before Odoo will create it. Foreign-currency entries are stopped for review rather than guessed."/>
+                            </group>
+                        </page>
+
+                        <page string="Expenses Migration">
+                            <group string="Date Range">
+                                <field name="sync_from_date"/>
+                                <field name="sync_to_date"/>
+                            </group>
+                            <group string="Bulk Migration">
+                                <button name="action_sync_expenses" type="object" string="Sync Expenses" class="btn-primary"
+                                        confirm="This will GET /Expenses first, skip status 30 and void rows before any ID-detail request, then GET /Expenses/{id} for each remaining record and create/update a balanced Odoo journal entry."/>
+                                <field name="expense_journal_id"/>
+                                <field name="auto_post_expenses"/>
+                                <field name="last_expenses_sync" readonly="1"/>
+                            </group>
+                            <group string="Import One Expense by ID">
+                                <field name="expense_external_id" placeholder="e.g. 600438"/>
+                                <button name="action_sync_expense_by_id" type="object" string="GET /Expenses/{id} and Import" class="btn-secondary"/>
+                            </group>
+                            <group string="Latest Expense Sync Counts">
+                                <field name="expenses_fetched_count" readonly="1"/>
+                                <field name="expenses_imported_count" readonly="1"/>
+                                <field name="expenses_failed_count" readonly="1"/>
+                            </group>
+                            <group string="Accounting Rule">
+                                <separator string="Each expenseDetails account is debited from the exact Splendid accountId/account code, and the top-level Expense account is credited for netAmount. Tax lines use exact Splendid purchase/input tax accounts when tax exists. No balancing or fallback GL line is guessed."/>
+                            </group>
+                        </page>
+
+                        <page string="Manufacturing / Job Orders">
+                            <group string="Date Range">
+                                <field name="sync_from_date"/>
+                                <field name="sync_to_date"/>
+                            </group>
+                            <group string="Job Order Sync">
+                                <button name="action_sync_job_orders" type="object" string="Sync Job Orders" class="btn-primary"
+                                        confirm="Each Splendid Job Order uses its own dedicated BoM. Component quantities come from Splendid. Splendid component cost/totalCost are ignored. Each mapped jobOrderExpense becomes a fixed-cost Odoo Manufacturing Work Order so the cost enters native Work Center costing. No separate custom Job Order expense Journal Entry is created."/>
+                                <field name="auto_confirm_job_orders"/>
+                                <field name="last_manufacturing_sync" readonly="1" string="Last Job Order Sync"/>
+                            </group>
+                            <group string="Costing Rule">
+                                <separator string="Odoo Costing: component quantities come from Splendid, component prices come from Odoo, and each jobOrderExpense becomes a fixed-cost Manufacturing Work Order. Odoo finished-product valuation therefore uses components + normal Work Orders + Splendid fixed-cost Work Orders. The old custom Job Order expense Journal Entry/Extra Unit Cost mechanism is disabled."/>
+                            </group>
+                            <group string="Latest Job Order Sync Counts">
+                                <field name="job_orders_fetched_count" readonly="1"/>
+                                <field name="job_orders_imported_count" readonly="1"/>
+                                <field name="job_orders_failed_count" readonly="1"/>
                             </group>
                         </page>
 
@@ -194,6 +281,21 @@
                                     <field name="taxes_imported_count" readonly="1"/>
                                     <field name="taxes_failed_count" readonly="1"/>
                                 </group>
+                                <group string="Journal Entries">
+                                    <field name="journal_entries_fetched_count" readonly="1"/>
+                                    <field name="journal_entries_imported_count" readonly="1"/>
+                                    <field name="journal_entries_failed_count" readonly="1"/>
+                                </group>
+                                <group string="Expenses">
+                                    <field name="expenses_fetched_count" readonly="1"/>
+                                    <field name="expenses_imported_count" readonly="1"/>
+                                    <field name="expenses_failed_count" readonly="1"/>
+                                </group>
+                                <group string="Job Orders / Manufacturing">
+                                    <field name="job_orders_fetched_count" readonly="1"/>
+                                    <field name="job_orders_imported_count" readonly="1"/>
+                                    <field name="job_orders_failed_count" readonly="1"/>
+                                </group>
                                 <group string="Sale Invoices">
                                     <field name="sale_invoices_fetched_count" readonly="1"/>
                                     <field name="sale_invoices_imported_count" readonly="1"/>
@@ -208,6 +310,11 @@
                                     <field name="customer_payments_fetched_count" readonly="1"/>
                                     <field name="customer_payments_imported_count" readonly="1"/>
                                     <field name="customer_payments_failed_count" readonly="1"/>
+                                </group>
+                                <group string="Customer Refunds">
+                                    <field name="customer_refunds_fetched_count" readonly="1"/>
+                                    <field name="customer_refunds_imported_count" readonly="1"/>
+                                    <field name="customer_refunds_failed_count" readonly="1"/>
                                 </group>
                                 <group string="Purchase Invoices / Vendor Bills">
                                     <field name="purchase_invoices_fetched_count" readonly="1"/>

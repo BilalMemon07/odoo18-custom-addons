@@ -1,0 +1,98 @@
+<odoo>
+    <record id="view_mrp_production_form_splendid_job_order" model="ir.ui.view">
+        <field name="name">mrp.production.form.splendid.job.order</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Splendid Job Order" invisible="not splendid_is_imported">
+                    <field name="splendid_is_imported" invisible="1"/>
+                    <group>
+                        <group string="Splendid Reference">
+                            <field name="splendid_job_order_id" readonly="1"/>
+                            <field name="splendid_job_order_number" readonly="1"/>
+                            <field name="splendid_job_order_status" readonly="1"/>
+                            <field name="splendid_actual_quantity_produced" readonly="1"/>
+                        </group>
+                        <group string="External Manufacturing Cost">
+                            <field name="splendid_job_expense_total" readonly="1"/>
+                            <field name="splendid_job_expense_unit_cost" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <separator string="Splendid Job Expenses → Manufacturing Work Orders"/>
+                    <field name="splendid_job_expense_ids" context="{'default_production_id': id}">
+                        <list create="false" delete="false">
+                            <field name="splendid_expense_id" readonly="1"/>
+                            <field name="description" readonly="1"/>
+                            <field name="account_id" readonly="1"/>
+                            <field name="amount" readonly="1"/>
+                            <field name="operation_id" readonly="1"/>
+                            <field name="workorder_id" readonly="1"/>
+                            <field name="is_current" readonly="1" optional="hide"/>
+                            <field name="review_note" readonly="1" optional="show"/>
+                            <field name="journal_entry_id" readonly="1" optional="hide" string="Legacy Journal Entry"/>
+                            <field name="vendor_bill_id" readonly="1" optional="hide" string="Legacy Vendor Bill"/>
+                        </list>
+                    </field>
+
+                    <separator string="Fixed-Cost Work Orders"/>
+                    <field name="workorder_ids" readonly="1" domain="[('splendid_is_external_cost', '=', True)]">
+                        <list create="false" delete="false">
+                            <field name="name"/>
+                            <field name="workcenter_id"/>
+                            <field name="splendid_job_expense_id"/>
+                            <field name="splendid_expense_account_id"/>
+                            <field name="splendid_external_cost"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_delete_splendid_manufacturing_orders" model="ir.actions.server">
+        <field name="name">Delete Splendid Manufacturing Orders</field>
+        <field name="model_id" ref="mrp.model_mrp_production"/>
+        <field name="binding_model_id" ref="mrp.model_mrp_production"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_delete_splendid_manufacturing_orders()</field>
+    </record>
+
+
+    <record id="view_mrp_workorder_form_splendid_fixed_cost" model="ir.ui.view">
+        <field name="name">mrp.workorder.form.splendid.fixed.cost</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_production_workorder_form_view_inherit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='workcenter_id']" position="after">
+                <field name="splendid_is_external_cost" invisible="1"/>
+                <field name="splendid_external_cost"
+                       string="Fixed Cost"
+                       readonly="1"
+                       invisible="not splendid_is_external_cost"/>
+                <field name="splendid_expense_account_id"
+                       readonly="1"
+                       invisible="not splendid_is_external_cost"/>
+                <field name="splendid_job_expense_id"
+                       readonly="1"
+                       invisible="not splendid_is_external_cost"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_workorder_list_splendid_fixed_cost" model="ir.ui.view">
+        <field name="name">mrp.workorder.list.splendid.fixed.cost</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_production_workorder_tree_editable_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='duration_expected']" position="after">
+                <field name="splendid_is_external_cost" column_invisible="True"/>
+                <field name="splendid_external_cost" string="Fixed Cost" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
