@@ -13,27 +13,56 @@
              if the invoice was created before FMCG dimensions were copied onto
              the invoice. -->
         <xpath expr="//table[@name='invoice_line_table']" position="before">
-            <t t-if="o.company_id.is_fmcg_company">
-                <t t-set="print_fmcg_zone" t-value="o.fmcg_zone_id or o.partner_id.fmcg_zone_id"/>
-                <t t-set="print_fmcg_territory" t-value="o.fmcg_territory_id or o.partner_id.fmcg_territory_id"/>
-                <div t-if="print_fmcg_zone or print_fmcg_territory" class="mb-2">
-                    <table class="table table-sm table-borderless" style="width:100%; margin-bottom:6px; font-size:11px; border-collapse:collapse;">
-                        <tbody>
-                            <tr>
-                                <td style="width:50%; padding:2px 4px; border:1px solid #dee2e6;">
-                                    <strong>Zone:</strong>
-                                    <span t-esc="print_fmcg_zone.display_name if print_fmcg_zone else '-'"/>
-                                </td>
-                                <td style="width:50%; padding:2px 4px; border:1px solid #dee2e6;">
-                                    <strong>Territory:</strong>
-                                    <span t-esc="print_fmcg_territory.display_name if print_fmcg_territory else '-'"/>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </t>
-        </xpath>
+    <t t-if="o.company_id.is_fmcg_company">
+        <t t-set="print_fmcg_region" t-value="o.fmcg_region_id or o.partner_id.fmcg_region_id"/>
+        <t t-set="print_fmcg_zone" t-value="o.fmcg_zone_id or o.partner_id.fmcg_zone_id"/>
+        <t t-set="print_fmcg_territory" t-value="o.fmcg_territory_id or o.partner_id.fmcg_territory_id"/>
+        <t t-set="print_fmcg_city" t-value="o.fmcg_city_id or o.partner_id.fmcg_city_id"/>
+        <t t-set="print_fmcg_channel" t-value="o.fmcg_channel_id or o.partner_id.fmcg_channel_id"/>
+
+        <div t-if="print_fmcg_region or print_fmcg_zone or print_fmcg_territory or print_fmcg_city or print_fmcg_channel"
+             class="mb-2">
+
+            <table class="table table-sm table-borderless"
+                   style="width:100%; margin-bottom:6px; font-size:10.5px; border-collapse:collapse; table-layout:fixed;">
+                <tbody>
+                    <tr>
+                        <td style="width:33.33%; padding:2px 4px; border:1px solid #dee2e6; word-break:break-word;">
+                            <strong>Region:</strong>
+                            <span t-esc="print_fmcg_region.display_name if print_fmcg_region else '-'"/>
+                        </td>
+
+                        <td style="width:33.33%; padding:2px 4px; border:1px solid #dee2e6; word-break:break-word;">
+                            <strong>Zone:</strong>
+                            <span t-esc="print_fmcg_zone.display_name if print_fmcg_zone else '-'"/>
+                        </td>
+
+                        <td style="width:33.33%; padding:2px 4px; border:1px solid #dee2e6; word-break:break-word;">
+                            <strong>Territory:</strong>
+                            <span t-esc="print_fmcg_territory.display_name if print_fmcg_territory else '-'"/>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="width:33.33%; padding:2px 4px; border:1px solid #dee2e6; word-break:break-word;">
+                            <strong>Town/City:</strong>
+                            <span t-esc="print_fmcg_city.display_name if print_fmcg_city else '-'"/>
+                        </td>
+
+                        <td style="width:33.33%; padding:2px 4px; border:1px solid #dee2e6; word-break:break-word;">
+                            <strong>Channel:</strong>
+                            <span t-esc="print_fmcg_channel.display_name if print_fmcg_channel else '-'"/>
+                        </td>
+
+                        <td style="width:33.33%; padding:2px 4px; border:1px solid #dee2e6;">
+                            &amp;nbsp;
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </t>
+</xpath>
 
         <!-- Add the custom table only for the selected company. -->
         <xpath expr="//table[@name='invoice_line_table']" position="before">
