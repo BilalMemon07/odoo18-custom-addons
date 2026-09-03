@@ -8,82 +8,151 @@
             <attribute name="t-if">not o.company_id.use_custom_invoice</attribute>
         </xpath>
 
+        <!-- FMCG customer dimensions on invoice print. This is shown only for
+             FMCG companies, and it falls back to the customer/contact values
+             if the invoice was created before FMCG dimensions were copied onto
+             the invoice. -->
+        <xpath expr="//table[@name='invoice_line_table']" position="before">
+            <t t-if="o.company_id.is_fmcg_company">
+                <t t-set="print_fmcg_zone" t-value="o.fmcg_zone_id or o.partner_id.fmcg_zone_id"/>
+                <t t-set="print_fmcg_territory" t-value="o.fmcg_territory_id or o.partner_id.fmcg_territory_id"/>
+                <div t-if="print_fmcg_zone or print_fmcg_territory" class="mb-2">
+                    <table class="table table-sm table-borderless" style="width:100%; margin-bottom:6px; font-size:11px; border-collapse:collapse;">
+                        <tbody>
+                            <tr>
+                                <td style="width:50%; padding:2px 4px; border:1px solid #dee2e6;">
+                                    <strong>Zone:</strong>
+                                    <span t-esc="print_fmcg_zone.display_name if print_fmcg_zone else '-'"/>
+                                </td>
+                                <td style="width:50%; padding:2px 4px; border:1px solid #dee2e6;">
+                                    <strong>Territory:</strong>
+                                    <span t-esc="print_fmcg_territory.display_name if print_fmcg_territory else '-'"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </xpath>
+
         <!-- Add the custom table only for the selected company. -->
         <xpath expr="//table[@name='invoice_line_table']" position="before">
+            <style>
+                .hoa_custom_invoice_line_table {
+                    width: 100%;
+                    table-layout: fixed;
+                    border-collapse: collapse;
+                    font-size: 8.5px;
+                    line-height: 1.2;
+                    margin-top: 4px;
+                }
+                .hoa_custom_invoice_line_table th,
+                .hoa_custom_invoice_line_table td {
+                    padding: 3px 4px !important;
+                    vertical-align: middle;
+                    border: 1px solid #dee2e6;
+                }
+                .hoa_custom_invoice_line_table thead {
+                    display: table-header-group;
+                }
+                .hoa_custom_invoice_line_table .hoa_product_col {
+                    white-space: normal;
+                    word-break: break-word;
+                }
+                .hoa_custom_invoice_line_table .hoa_number_col {
+                    white-space: nowrap;
+                    text-align: right;
+                }
+            </style>
+
             <table t-if="o.company_id.use_custom_invoice"
-                   class="table table-bordered o_main_table"
+                   class="table table-sm table-bordered o_main_table hoa_custom_invoice_line_table"
                    name="custom_invoice_line_table">
+                <colgroup>
+                    <col style="width:27%;"/>
+                    <col style="width:6%;"/>
+                    <col style="width:7%;"/>
+                    <col style="width:7%;"/>
+                    <col style="width:10%;"/>
+                    <col style="width:9%;"/>
+                    <col style="width:10%;"/>
+                    <col t-if="o.invoice_type == 'unofficial'" style="width:8%;"/>
+                    <t t-if="o.invoice_type == 'official'">
+                        <col style="width:7%;"/>
+                        <col style="width:10%;"/>
+                    </t>
+                    <col style="width:10%;"/>
+                </colgroup>
                 <thead>
                     <tr>
-                        <th>Product</th>
-                        <th class="text-end">Ctn</th>
-                        <th class="text-end">Pcs</th>
-                        <th class="text-end">Kgs</th>
-                        <th class="text-end">Trade Price</th>
-                        <th class="text-end">MSRP</th>
-                        <th class="text-end">Gross</th>
-                        <th t-if="o.invoice_type == 'unofficial'" class="text-end">Margin %</th>
+                        <th class="hoa_product_col">Product</th>
+                        <th class="hoa_number_col">Ctn</th>
+                        <th class="hoa_number_col">Pcs</th>
+                        <th class="hoa_number_col">Kgs</th>
+                        <th class="hoa_number_col">Trade Price</th>
+                        <th class="hoa_number_col">MSRP</th>
+                        <th class="hoa_number_col">Gross</th>
+                        <th t-if="o.invoice_type == 'unofficial'" class="hoa_number_col">Margin %</th>
                         <t t-if="o.invoice_type == 'official'">
-                            <th class="text-end">Tax %</th>
-                            <th class="text-end">Tax Amt</th>
+                            <th class="hoa_number_col">Tax %</th>
+                            <th class="hoa_number_col">Tax Amt</th>
                         </t>
-                        <th class="text-end">Net</th>
+                        <th class="hoa_number_col">Net</th>
                     </tr>
                 </thead>
                 <tbody>
                     <t t-foreach="o.invoice_line_ids" t-as="line">
                         <tr t-if="line.display_type == 'product'">
-                            <td>
+                            <td class="hoa_product_col">
                                 <span t-field="line.name"/>
                             </td>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.ctn_qty"/>
                             </td>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.pcs_qty"/>
                             </td>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.kgs_qty"/>
                             </td>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.trade_price"
                                       t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                             </td>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.msrp"
                                       t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                             </td>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.gross_amount"
                                       t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                             </td>
-                            <td t-if="o.invoice_type == 'unofficial'" class="text-end">
-                                <span t-field="line.distributor_margin"
-                                     />%
+                            <td t-if="o.invoice_type == 'unofficial'" class="hoa_number_col">
+                                <span t-field="line.distributor_margin"/>%
                             </td>
                             <t t-if="o.invoice_type == 'official'">
-                                <td class="text-end">
+                                <td class="hoa_number_col">
                                     <span t-esc="line.tax_ids[:1].amount if line.tax_ids else 0.0"/>%
                                 </td>
-                                <td class="text-end">
+                                <td class="hoa_number_col">
                                     <span t-out="line.price_total - line.price_subtotal"
                                           t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                                 </td>
                             </t>
-                            <td class="text-end">
+                            <td class="hoa_number_col">
                                 <span t-field="line.net_amount"
                                       t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                             </td>
                         </tr>
 
                         <tr t-elif="line.display_type in ('line_section', 'line_subsection')">
-                            <td colspan="100">
+                            <td colspan="100" class="hoa_product_col">
                                 <strong t-field="line.name"/>
                             </td>
                         </tr>
 
                         <tr t-elif="line.display_type == 'line_note'">
-                            <td colspan="100">
+                            <td colspan="100" class="hoa_product_col">
                                 <em t-field="line.name"/>
                             </td>
                         </tr>
