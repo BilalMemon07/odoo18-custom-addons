@@ -65,11 +65,13 @@ class ProductTemplate(models.Model):
         return self.fmcg_analytic_account_id or self.fmcg_brand_id.analytic_account_id
 
     def _get_product_accounts(self):
-        """Prefer brand-level accounts when configured, otherwise keep Odoo standard mapping."""
         accounts = super()._get_product_accounts()
-        self.ensure_one()
-        brand = self.fmcg_brand_id
-        company = self.company_id or self.env.company
+        if not self:
+            return accounts
+
+        product = self[:1]
+        brand = product.fmcg_brand_id
+        company = product.company_id or self.env.company
         if company.is_fmcg_company and brand:
             if brand.income_account_id:
                 accounts["income"] = brand.income_account_id
